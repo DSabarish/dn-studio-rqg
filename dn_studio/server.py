@@ -172,18 +172,15 @@ def _build_run_payload(
     try:
         if audio_path and audio_path != "None":
             audio_file = Path(audio_path)
-            if audio_file.exists() and audio_file.is_file():
-                payload["audio_name"] = audio_file.name
-                ext = audio_file.suffix.lower()
-                mime = {
-                    ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg",
-                    ".wav": "audio/wav", ".ogg": "audio/ogg", ".webm": "audio/webm",
-                }.get(ext, "audio/mpeg")
-                payload["audio_mime"] = mime
-                if audio_file.stat().st_size < 20 * 1024 * 1024:
-                    payload["audio_b64"] = base64.b64encode(audio_file.read_bytes()).decode("utf-8")
-                else:
-                    payload["audio_url"] = f"/api/serve_audio?path={audio_path}"
+            payload["audio_name"] = audio_file.name
+            ext = audio_file.suffix.lower()
+            payload["audio_mime"] = {
+                ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg",
+                ".wav": "audio/wav", ".ogg": "audio/ogg", ".webm": "audio/webm",
+            }.get(ext, "audio/mpeg")
+            payload["audio_url"] = f"/api/serve_audio?path={audio_path}"
+            if audio_file.exists() and audio_file.is_file() and audio_file.stat().st_size < 20 * 1024 * 1024:
+                payload["audio_b64"] = base64.b64encode(audio_file.read_bytes()).decode("utf-8")
     except Exception:
         pass
 
@@ -869,7 +866,7 @@ def api_serve_audio() -> Any:
         ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg",
         ".wav": "audio/wav", ".ogg": "audio/ogg", ".webm": "audio/webm",
     }.get(p.suffix.lower(), "audio/mpeg")
-    return send_file(str(p), mimetype=mime)
+    return send_file(str(p), mimetype=mime, conditional=True)
 
 
 @app.route("/api/generate_mom", methods=["POST"])
