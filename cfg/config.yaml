@@ -44,7 +44,7 @@ paths:
   scripts_dir: dn_studio
   outputs_root: outputs
   output_dir: outputs
-  audio: C:\Users\Selvam Sabarish\Downloads\ki\inputs\meeting_audio.mp3
+  audio: inputs/LMS.mp3
   input_transcript: outputs/diarization/transcript.json
   response_mom: outputs/response-mom.json
   response_brd: outputs/response-brd.json
