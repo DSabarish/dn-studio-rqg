@@ -15,8 +15,10 @@ from flask import Flask, jsonify, render_template_string, request, send_from_dir
 BASE_DIR   = Path(__file__).parent.absolute()
 GCS_DIR    = BASE_DIR / "gcs"
 CFG_DIR    = BASE_DIR / "cfg"
-AUDIO_DIR  = BASE_DIR / "audio"
-TMPL_PATH  = BASE_DIR / "dashboard.html"
+# For consistency with Colab runs and the dn_studio server, treat
+# inputs/ as the canonical location for uploaded audio.
+AUDIO_DIR  = BASE_DIR / "inputs"
+TMPL_PATH  = BASE_DIR / "dashboard.html"*** End Patch```} ***!
 
 GCS_DIR.mkdir(exist_ok=True)
 CFG_DIR.mkdir(exist_ok=True)
@@ -336,9 +338,33 @@ def api_generate_mom():
     transcript_path = run_dir / "transcript.json"
     if not transcript_path.exists():
         return jsonify({"ok": False, "error": "No transcript for this run"})
-    mom_md = _generate_doc(transcript_path, "mom", ctx)
-    (run_dir / "mom.md").write_text(mom_md, encoding="utf-8")
-    return jsonify({"ok": True, "content": mom_md})
+    # Use the same MoM LLM pipeline as the dn_studio dashboard
+    try:
+        from dn_studio.mom_llm import generate_mom
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"MoM LLM integration not available: {exc}"}), 500
+
+    result = generate_mom(
+        transcript_path=str(transcript_path),
+        output_dir=str(run_dir),
+        context=ctx or "",
+    )
+
+    if not result.get("ok"):
+        return jsonify({"ok": False, "error": result.get("error", "MoM generation failed")}), 500
+
+    mom_md = result.get("mom_md", "")
+    # Keep a flat mom.md copy for the legacy export endpoint
+    if mom_md:
+        (run_dir / "mom.md").write_text(mom_md, encoding="utf-8")
+
+    return jsonify({
+        "ok": True,
+        "mom_md": mom_md,
+        "mom_json_path": result.get("mom_json_path", ""),
+        "mom_trace_path": result.get("mom_trace_path", ""),
+        "mom_doc_path": result.get("mom_doc_path", ""),
+    })
 
 @app.route("/api/generate_brd", methods=["POST"])
 def api_generate_brd():
@@ -353,12 +379,36 @@ def api_generate_brd():
     transcript_path = run_dir / "transcript.json"
     if not transcript_path.exists():
         return jsonify({"ok": False, "error": "No transcript for this run"})
-    brd_md = _generate_doc(transcript_path, "brd", ctx)
-    (run_dir / "brd.md").write_text(brd_md, encoding="utf-8")
-    return jsonify({"ok": True, "content": brd_md})
+    # Use the same BRD LLM pipeline as the dn_studio dashboard
+    try:
+        from dn_studio.brd_llm import generate_brd
+    except Exception as exc:
+        return jsonify({"ok": False, "error": f"BRD LLM integration not available: {exc}"}), 500
+
+    result = generate_brd(
+        transcript_path=str(transcript_path),
+        output_dir=str(run_dir),
+        context=ctx or "",
+    )
+
+    if not result.get("ok"):
+        return jsonify({"ok": False, "error": result.get("error", "BRD generation failed")}), 500
+
+    brd_md = result.get("brd_md", "")
+    # Keep a flat brd.md copy for the legacy export endpoint
+    if brd_md:
+        (run_dir / "brd.md").write_text(brd_md, encoding="utf-8")
+
+    return jsonify({
+        "ok": True,
+        "brd_md": brd_md,
+        "brd_json_path": result.get("brd_json_path", ""),
+        "brd_trace_path": result.get("brd_trace_path", ""),
+    })
 
 def _generate_doc(transcript_path: Path, doc_type: str, context: str) -> str:
-    return f"# {doc_type.upper()} -- auto-generated\n\n_Plug in your LLM call in `app.py::_generate_doc`._\n"
+    # Legacy stub kept only so older code paths don't crash if still referenced.
+    return f"# {doc_type.upper()} -- auto-generated\n\n_Please run via the MoM/BRD LLM endpoints instead._\n"
 
 @app.route("/api/export", methods=["POST"])
 def api_export():

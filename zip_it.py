@@ -98,7 +98,11 @@ SENSITIVE_FILES = [
     "zip_it.py",
     "claudecode.txt",
     "dn_studio_fix_bundle.txt",
-    "notebook/sabarish.ipynb"
+    "notebook/sabarish.ipynb",
+    ".env",
+    "cfg/config.yaml",
+    "prompts/*",
+    "prompts/*.json",
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

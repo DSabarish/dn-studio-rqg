@@ -1,0 +1,517 @@
+
+{
+  "Task": {
+    "description": "Generate a complete Business Requirement Document (BRD) by analyzing a meeting transcript JSON and populating the provided BRD template. Only the 'value' and 'trace' fields should be filled. The schema structure, descriptions, and formats must remain unchanged. For every populated 'value', add a 'trace' object linking to the source utterance from the transcript.",
+    "input": "Meeting Transcript JSON + BRD_Template",
+    "output": "BRD JSON with populated value and trace fields"
+  },
+  "Model Configuration": {
+    "temperature": 0,
+    "top_p": 1,
+    "presence_penalty": 0,
+    "frequency_penalty": 0,
+    "deterministic_output": true
+  },
+  "Input Specification": {
+    "Transcript JSON": {
+      "description": "A JSON array containing meeting conversation segments with utterance_id, speaker_name, start time, and text.",
+      "format": {
+        "utterance_id": "number",
+        "start": "number",
+        "end": "number",
+        "speaker_name": "string",
+        "text": "string"
+      }
+    }
+  },
+  "Extraction Guidelines": {
+    "Project Information Extraction": {
+      "description": "Identify project purpose, users, and business objective discussed in the meeting."
+    },
+    "Technology Stack Extraction": {
+      "description": "Identify technologies mentioned during discussion."
+    },
+    "Architecture Extraction": {
+      "description": "Identify system components and represent interactions.",
+      "format": "[Source Component] -> [Destination Component]"
+    }
+  },
+    "Traceability Guidelines": {
+    "description": "For every populated 'value' field, identify the source utterance(s) from the transcript and add trace metadata. A single requirement may be derived from multiple conversation turns.",
+    "trace_item_format": {
+      "utterance_id": "number — the utterance_id from transcript",
+      "speaker": "string — speaker_name from transcript",
+      "timestamp": "number — start time from transcript"
+    },
+    "rules": [
+      "Every populated 'value' must have a corresponding 'trace' field",
+      "If value is null, trace must be null",
+      "If a value is derived from a SINGLE utterance, 'trace' should be a single object matching trace_item_format",
+      "CRITICAL: If a value is derived from MULTIPLE utterances (e.g., question + answer + clarification), 'trace' MUST be an ARRAY of trace objects",
+      "Example Array Format: 'trace': [ { 'utterance_id': 10, ... }, { 'utterance_id': 11, ... } ]",
+      "Never fabricate utterance_id — only use IDs that exist in the transcript",
+      "Ensure all utterance_ids in the trace (or trace array) exist in the input transcript"
+    ]
+  },
+  "Strict Rules": {
+    "No Hallucination": [
+      "Never invent information",
+      "Only extract information explicitly mentioned in the transcript",
+      "Do not guess technologies",
+      "Do not fabricate stakeholders",
+      "Do not fabricate utterance_ids"
+    ],
+    "Missing Information Handling": [
+      "If transcript does not contain information for a field, keep the value as null",
+      "If value is null, keep trace as null",
+      "Do not insert placeholders",
+      "Do not generate assumptions"
+    ]
+  },
+  "Schema Population Rules": [
+    "Do not modify schema keys",
+    "Do not remove description or format fields",
+    "Populate only the value and trace fields",
+    "Maintain the exact JSON structure",
+    "Every value field must have a corresponding trace field",
+    "Trace fields must reference valid utterance_ids from the transcript"
+  ],
+  "Language Rules": [
+    "Convert conversational speech into professional documentation",
+    "Use formal enterprise language"
+  ],
+  "Architecture Flow Rules": [
+    "Each flow must follow '[Component] -> [Component]' format"
+  ],
+  "Validation Rules": [
+    "Ensure schema structure matches BRD_Template",
+    "Ensure no hallucinated information exists",
+    "Ensure only value and trace fields were modified",
+    "Ensure output is valid JSON",
+    "Ensure all trace utterance_ids exist in the input transcript"
+  ],
+  "Output Format": {
+    "description": "Return the BRD_Template JSON with populated value and trace fields",
+    "format": "JSON"
+  },
+  "BRD_Template": {
+    "Header": {
+      "Project Name": {
+        "description": "Full official name of the project. Should be self-explanatory to any stakeholder without needing additional context. Format: [System or Tool Name] + [Core Function]. Avoid internal code names or abbreviations. This name will appear on all documents, Jira boards, and communication threads tied to this project.",
+        "format": "String — Title Case, typically 5–10 words",
+        "value": null,
+        "trace": null
+      },
+      "Version": {
+        "description": "Version number of this BRD document itself — not the software. Use semantic versioning X.Y format. Begin at 0.1 for the first working draft. Increment the minor digit (0.1 → 0.2) for each round of edits. Bump the major digit to 1.0 only when the document is formally submitted for stakeholder approval. Append '(Draft)' until all sign-offs are collected.",
+        "format": "String — X.Y (Draft | Final)",
+        "value": null,
+        "trace": null
+      },
+      "Date": {
+        "description": "The date this specific version of the document was last edited or issued. Must be updated every time the document is revised. Should match the corresponding revision entry in 'Document Revisions'. Format: ISO 8601 (YYYY-MMM-DD) or written Month DD, YYYY.",
+        "format": "String — YYYY-MMM-DD or 'Month DD, YYYY'",
+        "value": null,
+        "trace": null
+      },
+      "Business Unit": {
+        "description": "The internal organizational unit (department, team, or division) that owns this project, will consume its outputs, and is accountable for its success. Use the official name as it appears in the org chart. This determines who the primary stakeholders are and who signs off on scope changes.",
+        "format": "String — Official org-chart department name",
+        "value": null,
+        "trace": null
+      },
+      "Project Type": {
+        "description": "Classification of the technical nature of this project. Used to determine which requirement sections and non-functional requirements are most critical. Choose one or more from: Data Platform, ML / AI, Dashboard / BI, API Integration, ETL Pipeline, DevOps / Infrastructure, Web Application. Combine with ' + ' if multiple apply.",
+        "format": "String — one or more categories joined by ' + '",
+        "value": null,
+        "trace": null
+      },
+      "Deployment Model": {
+        "description": "Where and how the system will be hosted and run. This drives infrastructure assumptions throughout the document. Options: Cloud (always specify provider: GCP, AWS, Azure), On-Premise, Hybrid (Cloud + On-Prem), or SaaS. If Cloud, name the specific provider.",
+        "format": "String — 'Cloud (Provider)' | 'On-Premise' | 'Hybrid' | 'SaaS'",
+        "value": null,
+        "trace": null
+      },
+      "Primary Data Store": {
+        "description": "The main database, warehouse, or storage system where the system's data is persisted long-term. Name the specific technology product, not a generic category. This becomes a foundational assumption for data architecture, schema design, and query optimization decisions throughout the BRD.",
+        "format": "String — specific technology name (e.g., BigQuery, Snowflake, PostgreSQL, S3, MongoDB)",
+        "value": null,
+        "trace": null
+      },
+      "Compute Engine": {
+        "description": "The runtime environment where model execution or primary application logic runs. Be specific about the managed service or infrastructure. This drives decisions around scalability, containerization, and cost. Examples: Cloud Run, Kubernetes (GKE/EKS), AWS Lambda, EC2, Databricks, Azure Functions.",
+        "format": "String — specific managed service or compute platform name",
+        "value": null,
+        "trace": null
+      },
+      "Infrastructure": {
+        "description": "How cloud infrastructure is provisioned, version-controlled, and deployed. Specify the Infrastructure-as-Code (IaC) tool (Terraform, Pulumi, CloudFormation, Bicep) and the CI/CD pipeline mechanism (GitHub Actions, GitLab CI, Cloud Build, Jenkins). Use ' + ' to combine both.",
+        "format": "String — '[IaC Tool] + [CI/CD Tool]'",
+        "value": null,
+        "trace": null
+      },
+      "Document Status": {
+        "description": "The current lifecycle state of this BRD document. Controls whether the document is actionable for development teams. Valid values only: 'Draft' (being written, not yet reviewed), 'In Review' (circulated to stakeholders for feedback), 'Approved' (all sign-offs collected, work can begin), 'Archived' (superseded by a newer version). Must be updated each time document advances.",
+        "format": "String — 'Draft' | 'In Review' | 'Approved' | 'Archived'",
+        "value": null,
+        "trace": null
+      }
+    },
+    "0. Project Details": {
+      "Project Overview": {
+        "description": "A 2–4 sentence plain-English summary of the entire project. Written for a non-technical executive. Must answer: (1) What is being built? (2) Who will use it? (3) What technology does it rely on? (4) What business objective does it achieve? Avoid acronyms. This is the single most-read field in the BRD — treat it as the project's elevator pitch.",
+        "format": "String — 2–4 complete sentences, no bullet points, no jargon",
+        "value": null,
+        "trace": null
+      },
+      "Business Need": {
+        "description": "1–3 sentences describing the specific pain point, gap, or business problem this project solves. Answer the question: 'What is broken, slow, risky, or missing today that this project fixes?' Where possible, quantify the pain (manual hours wasted, error rates, data freshness delays). This justifies the investment.",
+        "format": "String — 1–3 sentences, problem-focused, ideally quantified",
+        "value": null,
+        "trace": null
+      },
+      "Success Criteria": {
+        "description": "A list of binary, verifiable completion conditions. Each item must be testable by a QA engineer or business analyst — no subjective language. Format each item as a falsifiable statement: '[Component] [is / has been] [specific measurable state]'. Minimum 3 criteria. These are used during UAT to confirm the project is done.",
+        "format": "Array of strings — each a testable, falsifiable completion statement",
+        "value": null,
+        "trace": null
+      }
+    },
+    "0. Document Revisions": {
+      "description": "Ordered audit trail of every version of this document. Add a new entry every time the document is materially updated. Never delete past entries. Entries are listed chronologically from oldest to newest. The most recent entry must match the Header Version and Date.",
+      "format": "Array of objects, each with: Version (string), Date (string), Author (string), Description (string)",
+      "items": {
+        "Version": {
+          "description": "Version number of this specific revision. Must be unique per row. Increment minor digit for edits (0.1 → 0.2 → 0.3). Increment major digit for structural overhauls or formal resubmissions (0.x → 1.0).",
+          "format": "String — X.Y",
+          "value": null,
+          "trace": null
+        },
+        "Date": {
+          "description": "The exact date this version was created or finalized. Format must be consistent across all revision rows. Do not leave blank — use the actual calendar date.",
+          "format": "String — YYYY-MM-DD or 'Month DD, YYYY'",
+          "value": null,
+          "trace": null
+        },
+        "Author": {
+          "description": "Name or team name of whoever authored this version's changes. Use the same format consistently (either always use full names, or always use team names). Do not use pronouns or vague references like 'us' or 'the team'.",
+          "format": "String — person name or team name",
+          "value": null,
+          "trace": null
+        },
+        "Description": {
+          "description": "1–2 sentences describing what specifically changed in this version. Be concrete: 'Added Section 6 functional requirements and updated risk table' is better than 'Updated document'. Helps future readers quickly identify when a specific change was introduced.",
+          "format": "String — 1–2 sentences describing changes made",
+          "value": null,
+          "trace": null
+        }
+      }
+    },
+    "0. Stakeholder Approvals": {
+      "description": "List of all individuals who must formally approve this BRD before project work begins. Each row is a required sign-off. The document cannot move to 'Approved' status until all rows show 'Approved'. Rows should cover all domains: technical, operational, executive, and compliance if applicable.",
+      "format": "Array of objects, each with: Name (string), Role (string), Status (string)",
+      "items": {
+        "Name": {
+          "description": "Full name of the approving individual. Do not use job titles here — use the person's actual name so they can be identified, contacted, and held accountable. Placeholder names like 'ML Lead' should be replaced with real names before the document is formally issued.",
+          "format": "String — full person name (First Last)",
+          "value": null,
+          "trace": null
+        },
+        "Role": {
+          "description": "The approver's function in the context of this project's approval chain — not necessarily their job title. Describes what domain they are approving. Examples: Model Owner, Infrastructure Owner, Dashboard Owner, Executive Approver, Data Steward, Legal Reviewer, Security Reviewer.",
+          "format": "String — domain-specific approver role",
+          "value": null,
+          "trace": null
+        },
+        "Status": {
+          "description": "Current approval state for this individual. Must only use one of three values: 'Pending' (not yet reviewed), 'In Review' (document sent, awaiting response), 'Approved' (formally signed off). Update this field in real time as approvals are collected. Never mark Approved without written confirmation.",
+          "format": "String — 'Pending' | 'In Review' | 'Approved'",
+          "value": null,
+          "trace": null
+        }
+      }
+    },
+    "1. Introduction": {
+      "1.1 Project Summary": {
+        "description": "A single dense paragraph (3–6 sentences) giving the technical project summary — slightly more detailed than the Project Overview. Intended for a technical audience (architects, leads). Must mention: system type, execution pattern, data storage approach, user-facing components, and delivery model (phased or single release). This is NOT a repeat of Project Overview — it adds technical precision.",
+        "format": "String — 3–6 sentences, technical but not code-level detail",
+        "value": null,
+        "trace": null
+      },
+      "1.2 Objectives": {
+        "description": "Structured list of project objectives split into Primary (must be achieved for project success) and Secondary (valuable but not blocking). Primary objectives are MVP-level requirements. Secondary objectives are Phase 2+ enhancements. Each objective should be a single action-oriented statement starting with a verb.",
+        "format": "Object with two keys: 'Primary' (array of strings) and 'Secondary' (array of strings)",
+        "items": {
+          "Primary": {
+            "description": "List of must-have objectives. If any of these are not achieved, the project is considered failed. Each should start with an action verb. These map directly to Phase 1 scope items.",
+            "format": "Array of strings — each starting with a verb (Automate, Build, Implement, Enable, etc.)",
+            "value": null,
+            "trace": null
+          },
+          "Secondary": {
+            "description": "List of valuable but non-blocking objectives. These are aspirational for Phase 2 or Phase 3. If not delivered in v1, they will not cause project failure. Each should start with a verb.",
+            "format": "Array of strings — each starting with a verb",
+            "value": null,
+            "trace": null
+          }
+        }
+      },
+      "1.3 Background & Business Context": {
+        "description": "2–4 sentences explaining the history and current state that makes this project necessary. Answer: What was done before? Why is that approach no longer sufficient? What risks or limitations exist with the current state? This gives reviewers context for why the proposed solution was chosen over simpler alternatives.",
+        "format": "String — 2–4 sentences, factual, past-tense description of current state and its problems",
+        "value": null,
+        "trace": null
+      },
+      "1.4 Business Drivers": {
+        "description": "A list of the underlying strategic or operational forces driving this project. These are the 'why now' reasons — business pressures, strategic goals, compliance needs, or efficiency targets. Each item should be a short noun phrase (2–5 words). These are referenced throughout the BRD to justify specific requirements.",
+        "format": "Array of strings — short noun phrases (not full sentences)",
+        "value": null,
+        "trace": null
+      }
+    },
+    "2. Project Scope": {
+      "2.1 In-Scope Functionality": {
+        "description": "Exhaustive list of every feature, capability, or deliverable that IS included in this project and must be delivered. Be as specific as possible. Anything not on this list can be used by the team to reject scope additions without a formal change request. Each item should be a short but specific noun phrase or action. Review this list with the engineering lead to confirm feasibility.",
+        "format": "Array of strings — specific, concrete deliverables and features",
+        "value": null,
+        "trace": null
+      },
+      "2.2 Out-of-Scope Functionality": {
+        "description": "Explicit list of features and capabilities that are NOT included in this project. This is critical for managing stakeholder expectations and preventing scope creep. Include things that might seem naturally related but are intentionally deferred. Add phase notes in parentheses where applicable (e.g., '(Phase 2)').",
+        "format": "Array of strings — features explicitly excluded, with phase or reason notes where helpful",
+        "value": null,
+        "trace": null
+      },
+      "2.3 Phasing Plan": {
+        "description": "High-level breakdown of how the project will be delivered in sequential phases. Each phase should be a coherent, releasable chunk of value. Phase 1 is always MVP. Later phases add capabilities incrementally. Describe each phase with a brief scope summary — not a timeline (dates go in the project plan, not the BRD).",
+        "format": "Object with keys 'Phase 1', 'Phase 2', 'Phase 3' (etc.) — each a short scope description string",
+        "items": {
+          "Phase 1": {
+            "description": "The minimum viable product phase. Must be self-sufficient and provide immediate business value. Typically covers infrastructure setup, core automation, and basic user-facing output.",
+            "value": null,
+            "trace": null
+          },
+          "Phase 2": {
+            "description": "First enhancement phase after MVP. Adds operational capabilities that require Phase 1 to be stable first. Often covers admin features, data management, and monitoring improvements.",
+            "value": null,
+            "trace": null
+          },
+          "Phase 3": {
+            "description": "Optimization and governance phase. Typically covers access control, performance tuning, advanced analytics, and architecture hardening.",
+            "value": null,
+            "trace": null
+          }
+        }
+      }
+    },
+    "3. System Perspective": {
+      "3.1 Assumptions": {
+        "description": "List of conditions the team is treating as true without formal confirmation. If any assumption turns out to be false, it may trigger a scope change or rework. Each assumption should be a factual declarative statement. Examples: technology choices already decided, team skills available, existing systems the new one depends on.",
+        "format": "Array of strings — declarative factual statements about conditions assumed to be true",
+        "value": null,
+        "trace": null
+      },
+      "3.2 Constraints": {
+        "description": "Fixed limitations the project must operate within. Unlike risks, constraints are known hard limits — they cannot be changed, only worked around. Examples: budget caps, compliance mandates, technology lock-in, team size, existing system dependencies, timeline fixed dates.",
+        "format": "Array of strings — hard limits that cannot be changed",
+        "value": null,
+        "trace": null
+      },
+      "3.3 Risks": {
+        "description": "List of potential problems that could derail the project, each paired with a mitigation strategy. Risks are uncertain — they may or may not occur. Each risk entry must have both a Risk statement (what could go wrong) and a Mitigation (what action reduces the probability or impact). Risk should be specific, not generic.",
+        "format": "Array of objects, each with 'Risk' (string) and 'Mitigation' (string)",
+        "items": {
+          "Risk": {
+            "description": "A specific, concrete description of what could go wrong. Avoid vague risks like 'technical challenges'. Instead: 'BigQuery table growth exceeds query performance thresholds within 6 months due to unpartitioned monthly appends'.",
+            "format": "String — specific risk event with potential impact",
+            "value": null,
+            "trace": null
+          },
+          "Mitigation": {
+            "description": "A concrete action or design decision that reduces the likelihood or impact of the associated risk. Should be actionable — something the team can actually do. Not a vague statement like 'monitor closely'.",
+            "format": "String — specific action or design decision to reduce risk",
+            "value": null,
+            "trace": null
+          }
+        }
+      }
+    },
+    "4. Business Process Overview": {
+      "4.1 Current Process (As-Is)": {
+        "description": "Step-by-step description of how the business process works TODAY — before this project is built. List each step or characteristic of the current workflow. This establishes the baseline the new system replaces. Be honest about inefficiencies — this section justifies the investment. Use present tense.",
+        "format": "Array of strings — ordered or unordered steps/characteristics of current workflow",
+        "value": null,
+        "trace": null
+      },
+      "4.2 Proposed Process (To-Be)": {
+        "description": "Step-by-step description of how the process will work AFTER this project is delivered. Should mirror the As-Is structure for easy comparison. Each step should map to a functional requirement. Use future or present tense consistently. This is the target state the project is building toward.",
+        "format": "Array of strings — ordered steps of the future automated/improved workflow",
+        "value": null,
+        "trace": null
+      }
+    },
+    "5. KPI & Success Metrics": {
+      "description": "Quantitative performance targets used to evaluate whether the system is operating successfully in production. Each metric must be measurable and independently verifiable. These are used during go-live validation and ongoing monitoring. Every major system component should have at least one KPI. Avoid aspirational language — use numbers.",
+      "format": "Array of objects, each with 'Metric' (string) and 'Target' (string with operator and unit)",
+      "items": {
+        "Metric": {
+          "description": "The name of the measurable KPI. Should be specific to a system component or user experience dimension. Examples: Monthly job success rate, Dashboard load time (P95), BigQuery query latency (P99), Deployment pipeline success rate, Active user adoption rate.",
+          "format": "String — specific measurable performance indicator name",
+          "value": null,
+          "trace": null
+        },
+        "Target": {
+          "description": "The numeric threshold the system must meet or exceed. Always include comparison operator (>=, <=, <, >) and unit (%, seconds, ms, etc.). Must be achievable and verifiable in a monitoring dashboard or test. Consult engineering before setting targets — avoid targets that are technically impossible with the chosen stack.",
+          "format": "String — operator + number + unit (e.g., '>=99%', '<2 seconds', '<500ms')",
+          "value": null,
+          "trace": null
+        }
+      }
+    },
+    "6. Functional Requirements": {
+      "Priority Rating Scale": {
+        "description": "The legend defining what each priority code means. Must be defined before any requirements are listed so reviewers interpret priorities consistently. P1/P2/P3 maps to MoSCoW-style prioritization. This object is a reference — do not add requirements here.",
+        "format": "Object with keys P1, P2, P3 — each mapped to a plain-English label string",
+        "items": {
+          "P1": {
+            "description": "Must Have — project is not complete without this. These are blocking requirements. If not delivered, the project fails UAT.",
+            "value": null,
+            "trace": null
+          },
+          "P2": {
+            "description": "Should Have — strongly desired and planned, but the project can launch without it if necessary. Deferral requires explicit stakeholder agreement.",
+            "value": null,
+            "trace": null
+          },
+          "P3": {
+            "description": "Nice to Have — valuable enhancement but not planned for current phase. Included for visibility and future planning purposes only.",
+            "value": null,
+            "trace": null
+          }
+        }
+      },
+      "6.1 Student Module Requirements": {
+        "description": "List of functional requirements specific to the Student user module. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      },
+      "6.2 Parent Module Requirements": {
+        "description": "List of functional requirements specific to the Parent user module. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      },
+      "6.3 Teacher Module Requirements": {
+        "description": "List of functional requirements specific to the Teacher user module. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      },
+      "6.4 Admin Module Requirements": {
+        "description": "List of functional requirements specific to the Admin user module. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      },
+      "6.5 Management Module Requirements": {
+        "description": "List of functional requirements specific to the Management user module. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      },
+      "6.6 General / Cross-Cutting Requirements": {
+        "description": "List of cross-cutting functional requirements that apply across all modules. Each requirement should be testable and traceable to a transcript utterance.",
+        "format": "Array of strings — specific functional capabilities, each testable",
+        "value": null,
+        "trace": null
+      }
+    },
+    "7. Non-Functional Requirements": {
+      "7.1 Performance & Scalability": {
+        "description": "Requirements for how fast and how large the system must perform. These are measurable quality attributes — not features. Include query latency, throughput, data volume ceilings, and horizontal scaling expectations. Each item should be testable under a load test or benchmark.",
+        "format": "Array of strings — measurable performance and scalability requirements",
+        "value": null,
+        "trace": null
+      },
+      "7.2 Availability & Reliability": {
+        "description": "Uptime and resilience requirements for the system. Define SLA targets (e.g., 99.9%), acceptable downtime windows, failure recovery mechanisms, and rollback capabilities. These drive infrastructure design decisions like redundancy, health checks, and deployment strategies.",
+        "format": "Array of strings — uptime targets and reliability mechanisms",
+        "value": null,
+        "trace": null
+      },
+      "7.3 Usability & Accessibility": {
+        "description": "Requirements for user experience, accessibility compliance, and ease of use. Include WCAG compliance levels, mobile responsiveness, and usability testing requirements.",
+        "format": "Array of strings — usability and accessibility requirements",
+        "value": null,
+        "trace": null
+      },
+      "7.4 Security & Access Control": {
+        "description": "Requirements for authentication, authorization, encryption, and security controls. Include password policies, role-based access control, and audit logging requirements.",
+        "format": "Array of strings — security and access control requirements",
+        "value": null,
+        "trace": null
+      },
+      "7.5 Compliance & Regulatory": {
+        "description": "Requirements driven by legal, regulatory, or internal policy obligations. Covers data classification, PII handling, access logging, and data residency. Even for internal-only systems, document the data classification level and confirm no regulated data (PII, PHI, PCI) is processed without appropriate controls.",
+        "format": "Array of strings — compliance mandates and data governance rules",
+        "value": null,
+        "trace": null
+      }
+    },
+    "8. Data Governance & Privacy": {
+      "8.1 Data Classification": {
+        "description": "A mapping of each data asset or data type in the system to its official sensitivity classification level. Classification drives access controls, encryption requirements, and audit logging intensity. Use your organization's official classification taxonomy (commonly: Public, Internal, Confidential, Restricted/Secret). Each key is a data asset name; each value is its classification level.",
+        "format": "Object — keys are data asset names (strings), values are classification levels (strings)",
+        "value": null,
+        "trace": null
+      },
+      "8.2 Data Privacy Checklist": {
+        "description": "A checklist of privacy-related design decisions and safeguards that have been evaluated for this system. Each item should be a confirmed design decision or a completed evaluation. This demonstrates due diligence and is referenced during security review. Items should be written as completed affirmations, not open questions.",
+        "format": "Array of strings — completed privacy design decisions or confirmed evaluations",
+        "value": null,
+        "trace": null
+      }
+    },
+    "9. Technology Stack & Architecture": {
+      "9.1 Proposed Technology Stack": {
+        "description": "A complete mapping of each architectural layer to the specific technology chosen. Covers every major system concern: storage, compute, infrastructure management, deployment pipeline, scheduling, and user interface. Each key is an architectural layer; each value is the selected technology product. Finalized stack decisions should be confirmed with the architecture review board.",
+        "format": "Object — keys are architectural layer names, values are specific technology product names",
+        "value": null,
+        "trace": null
+      },
+      "9.2 Architecture Diagram": {
+        "description": "A textual representation of the system's data and control flow. Each entry in the Flow array is one directional connection between two system components, written in the format '[Source] -> [Destination]'. This is used as the basis for drawing the actual architecture diagram. Future/planned connections should be prefixed with 'Future:'.",
+        "format": "Object with key 'Flow' — an array of strings in '[Component] -> [Component]' format",
+        "value": null,
+        "trace": null
+      }
+    },
+    "10. Appendices": {
+      "10.1 Glossary of Terms": {
+        "description": "A dictionary of technical or domain-specific terms used in this document that may be unfamiliar to non-technical stakeholders. Each key is the term as it appears in the document; each value is a plain-English, jargon-free definition. Add any term that would confuse a business analyst or executive reader. Alphabetical order preferred.",
+        "format": "Object — keys are terms (strings), values are definitions (strings, 1–2 sentences max)",
+        "value": null,
+        "trace": null
+      },
+      "10.2 List of Acronyms": {
+        "description": "A flat list of every acronym used anywhere in this document. Each entry is just the acronym itself — the full expansion is in the Glossary. This list is used as a quick-reference checklist to ensure no acronym is used without being defined. Alphabetical order preferred.",
+        "format": "Array of strings — acronyms only (no definitions here)",
+        "value": null,
+        "trace": null
+      },
+      "10.3 Related Documents": {
+        "description": "List of other documents, specifications, or references that are related to this BRD and should be consulted alongside it. Each entry is the document's official name. Where possible, include a hyperlink or document ID. These are documents that inform or depend on this BRD — not external links or blog posts.",
+        "format": "Array of strings — official document names (add URLs/IDs if available)",
+        "value": null,
+        "trace": null
+      },
+      "10.4 Document Sign-Off": {
+        "description": "The final formal sign-off table that confirms all required approvers have reviewed and accepted the complete document. This is a legal and governance record. Each row represents one approving authority. This section is separate from the Stakeholder Approvals in Section 0 — it is the final executed record, typically with signatures or email confirmation timestamps.",
+        "format": "Array of objects, each with 'Name' (string) and 'Role' (string) — and optionally 'Date' and 'Signature'",
+        "value": null,
+        "trace": null
+      }
+    }
+  }
+}

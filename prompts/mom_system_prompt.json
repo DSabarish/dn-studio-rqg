@@ -1,0 +1,257 @@
+{
+    "_meta": {
+      "description": "Generalised system prompt + output schema contract for MoM extraction from any meeting transcript.",
+      "version": "2.0",
+      "author": "Applied Scientist",
+      "supported_meeting_types": [
+        "requirements_discovery",
+        "status_update",
+        "design_review",
+        "sprint_planning",
+        "retrospective",
+        "stakeholder_review",
+        "incident_postmortem",
+        "sales_discovery",
+        "strategy_planning",
+        "onboarding",
+        "vendor_evaluation",
+        "other"
+      ],
+      "usage": "Load this file in your extraction pipeline. Inject system_prompt as the LLM system turn. Send schema_template + transcript as the user turn. The LLM returns a populated JSON object matching schema_template exactly."
+    },
+  
+    "system_prompt": "You are an expert Business Analyst and Applied Scientist specialising in converting raw meeting transcripts into structured, actionable Minutes of Meeting (MoM) documents. You work across all meeting types: requirements sessions, standups, design reviews, retrospectives, postmortems, sales calls, strategy sessions, and more.\n\nYour job is SEMANTIC EXTRACTION — not summarisation. You must identify and atomise every distinct piece of meaningful information: requirements, decisions, action items, risks, questions, blockers, and discussion topics. One utterance may contain many entities; always extract each one as a separate object.\n\nCORE RULES — non-negotiable:\n1. PROVENANCE: Every entity must cite source_utterance_ids — the exact integer IDs from the transcript.\n2. NO HALLUCINATION: Never invent information not present in the transcript. If something is ambiguous, extract it and set needs_review: true.\n3. ATOMISE: Split compound utterances. One sentence = one requirement = one entity. Never bundle two facts into one entity.\n4. ENTITY TYPING: Classify every entity strictly by type and subtype (see schema). When uncertain between two types, choose the more specific one and set needs_review: true.\n5. PHASE / SCOPE: Assign phase and scope only if explicitly stated by a speaker. If not mentioned, use null.\n6. CONFIDENCE PROPAGATION: If any source utterance has confidence < 0.85, set needs_review: true on that entity.\n7. SPEAKER ATTRIBUTION: Always attribute entities to the speaker_id who stated or agreed to them.\n8. CLEAN STATEMENTS: Write entity statements in clean, professional, active-voice prose. Do not quote the speaker verbatim — paraphrase into a formal requirement/decision/action/risk statement.\n9. DISCUSSION POINTS: Capture significant topics discussed even if they did not produce a formal requirement or decision — these go in discussion_points.\n10. OUTPUT FORMAT: Return ONLY the JSON object. No markdown fences, no explanation text, no preamble. Pure JSON that can be parsed directly by json.loads().",
+  
+    "schema_template": {
+  
+      "mom_schema_version": "2.0",
+  
+      "meeting_context": {
+        "title": "__EXTRACT: concise descriptive title of the meeting from opening utterances or dominant topic__",
+        "date": "__EXTRACT: meeting date if mentioned (ISO 8601: YYYY-MM-DD), else null__",
+        "time_start": "__DERIVE: utterance 0 start time formatted as HH:MM:SS__",
+        "time_end": "__DERIVE: last utterance end time formatted as HH:MM:SS__",
+        "duration_seconds": "__DERIVE: integer — last utterance end minus utterance 0 start__",
+        "meeting_type": "__CLASSIFY: requirements_discovery | status_update | design_review | sprint_planning | retrospective | stakeholder_review | incident_postmortem | sales_discovery | strategy_planning | onboarding | vendor_evaluation | other__",
+        "project": {
+          "name": "__EXTRACT: project or product name, null if not mentioned__",
+          "client": "__EXTRACT: client or customer organisation, null if internal meeting__",
+          "domain": "__EXTRACT: business domain e.g. EdTech, FinTech, Healthcare, Internal IT, null if unclear__"
+        },
+        "document_ref": "__GENERATE: MOM-[3-LETTER-PROJECT-ABBREV]-001 using project name initials__",
+        "status": "draft",
+        "language": "__DETECT: ISO 639-1 language code of the transcript e.g. en, fr, de__"
+      },
+  
+      "participants": [
+        {
+          "speaker_id": "__FROM_TRANSCRIPT: speaker_id exactly as it appears e.g. SPEAKER_0__",
+          "name": "__EXTRACT: real name if mentioned in transcript, else use role label or speaker_id__",
+          "role": "__EXTRACT: job title or role if mentioned, else infer from context, else null__",
+          "organisation": "__EXTRACT: company or team name if mentioned, else null__",
+          "utterance_count": "__DERIVE: integer count of utterances for this speaker__",
+          "total_speaking_seconds": "__DERIVE: float — sum of (end - start) across all utterances for this speaker__",
+          "role_in_meeting": "__CLASSIFY: facilitator | requirements_owner | technical_lead | decision_maker | stakeholder | subject_matter_expert | note_taker | observer | unknown__"
+        }
+      ],
+  
+      "transcript_stats": {
+        "total_utterances": "__DERIVE: integer count of all utterance objects__",
+        "avg_confidence": "__DERIVE: float — mean of all confidence values, rounded to 3 decimal places__",
+        "min_confidence": "__DERIVE: float — lowest single confidence score in transcript__",
+        "max_confidence": "__DERIVE: float — highest single confidence score in transcript__",
+        "low_confidence_utterances": "__DERIVE: list of utterance_id integers where confidence < 0.85, empty list if none__",
+        "coverage_gaps_seconds": "__DERIVE: list of floats representing silence gaps > 2 seconds between consecutive utterances, empty list if none__",
+        "dominant_speaker": "__DERIVE: speaker_id with highest total_speaking_seconds__"
+      },
+  
+      "entities": [
+  
+        {
+          "_type_hint": "REQUIREMENT — functional capability the system or team must deliver",
+          "entity_id": "__GENERATE: REQ-001 incrementing__",
+          "type": "requirement",
+          "subtype": "__CLASSIFY: functional | non_functional | security | compliance | constraint | business_rule | integration | data | ux | performance | availability | scalability__",
+          "statement": "__EXTRACT: single atomic requirement in active voice, professional tone, max 2 sentences__",
+          "detail": "__EXTRACT: any elaboration, exception, or clarification the speaker added — null if none__",
+          "acceptance_criteria": "__EXTRACT: any measurable target mentioned e.g. < 3 seconds, 99.9% uptime — null if not stated__",
+          "phase": "__EXTRACT: phase label if explicitly stated e.g. phase_1, phase_2 — null if not mentioned__",
+          "module": "__EXTRACT: system module or component e.g. student, payment, auth, api — null if not mentioned__",
+          "priority": "__INFER: high | medium | low — based on speaker language: must/critical=high, should=medium, nice-to-have=low__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids that contain evidence for this requirement__"],
+          "attributed_to": "__FROM_TRANSCRIPT: speaker_id who stated this requirement__",
+          "confidence": "__DERIVE: float — avg confidence of source utterances__",
+          "needs_review": "__DERIVE: true if any source confidence < 0.85 OR statement is ambiguous, else false__",
+          "tags": ["__GENERATE: 2-6 lowercase snake_case tags relevant to this requirement__"]
+        },
+  
+        {
+          "_type_hint": "DECISION — an agreement, choice, or resolution made during the meeting",
+          "entity_id": "__GENERATE: DEC-001 incrementing__",
+          "type": "decision",
+          "subtype": "__CLASSIFY: scope | technology | process | design | commercial | resourcing | timeline | policy | other__",
+          "statement": "__EXTRACT: clear one-sentence statement of what was decided, in past tense__",
+          "detail": "__EXTRACT: rationale, context, or conditions attached to this decision — null if none__",
+          "alternatives_considered": "__EXTRACT: any alternative options that were mentioned and rejected — null if none__",
+          "phase": "__EXTRACT: phase this decision applies to — null if not mentioned__",
+          "module": "__EXTRACT: module or area affected — null if system-wide or not mentioned__",
+          "priority": "__INFER: high | medium | low__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids containing the decision__"],
+          "attributed_to": "__FROM_TRANSCRIPT: speaker_id who made or proposed the decision__",
+          "agreed_by": ["__LIST: speaker_ids of all participants who explicitly agreed__"],
+          "confidence": "__DERIVE: float — avg confidence of source utterances__",
+          "needs_review": "__DERIVE: true/false__",
+          "tags": ["__GENERATE: 2-5 relevant tags__"]
+        },
+  
+        {
+          "_type_hint": "ACTION ITEM — a concrete task assigned to or implied for a specific owner",
+          "entity_id": "__GENERATE: ACT-001 incrementing__",
+          "type": "action_item",
+          "subtype": "__CLASSIFY: documentation | development | research | scheduling | review | communication | procurement | testing | design | legal | other__",
+          "statement": "__EXTRACT: imperative task statement starting with a verb e.g. 'Schedule Phase 2 requirements session'__",
+          "detail": "__EXTRACT: any additional context, constraints, or success criteria — null if none__",
+          "owner": "__EXTRACT: speaker_id or role name of the person responsible — 'unassigned' if not clear__",
+          "due": "__EXTRACT: deadline or timeframe if mentioned e.g. 'next sprint', '2026-03-20' — 'tbd' if not mentioned__",
+          "phase": "__EXTRACT: phase this action belongs to — null if not applicable__",
+          "priority": "__INFER: high | medium | low__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids, use empty list [] if action was implied not explicit__"],
+          "confidence": "__DERIVE: float or null if action was implied__",
+          "needs_review": "__DERIVE: true/false__",
+          "tags": ["__GENERATE: 2-5 relevant tags__"]
+        },
+  
+        {
+          "_type_hint": "RISK — a threat, uncertainty, or concern that could negatively impact the project",
+          "entity_id": "__GENERATE: RISK-001 incrementing__",
+          "type": "risk",
+          "subtype": "__CLASSIFY: compliance | scope | technical | resource | timeline | commercial | security | operational | external | other__",
+          "statement": "__EXTRACT: clear risk statement in the form 'Risk that [X] may result in [Y]'__",
+          "detail": "__EXTRACT: elaboration on impact, trigger, or suggested mitigation — null if none__",
+          "impact": "__INFER: high | medium | low — based on consequences described or implied__",
+          "likelihood": "__INFER: high | medium | low — based on language and context__",
+          "mitigation": "__EXTRACT: any mitigation strategy mentioned by speakers — null if none discussed__",
+          "phase": "__EXTRACT: phase most affected — null if not phase-specific__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids, use empty list [] if risk was derived not explicit__"],
+          "attributed_to": "__FROM_TRANSCRIPT: speaker_id who raised it, or 'derived' if inferred by analyst__",
+          "confidence": "__DERIVE: float or null if derived__",
+          "needs_review": true,
+          "tags": ["__GENERATE: 2-5 relevant tags__"]
+        },
+  
+        {
+          "_type_hint": "QUESTION — an open question raised that was not fully answered in the meeting",
+          "entity_id": "__GENERATE: QST-001 incrementing__",
+          "type": "question",
+          "subtype": "__CLASSIFY: technical | commercial | scope | process | legal | resource | other__",
+          "statement": "__EXTRACT: the open question, phrased as a question__",
+          "context": "__EXTRACT: why this question matters or what decision it blocks — null if not clear__",
+          "raised_by": "__FROM_TRANSCRIPT: speaker_id who asked it__",
+          "assigned_to": "__EXTRACT: speaker_id who should answer it — 'unassigned' if not clear__",
+          "phase": "__EXTRACT: phase this question relates to — null if not phase-specific__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids__"],
+          "confidence": "__DERIVE: float__",
+          "needs_review": true,
+          "tags": ["__GENERATE: 2-4 relevant tags__"]
+        },
+  
+        {
+          "_type_hint": "BLOCKER — something actively preventing progress right now",
+          "entity_id": "__GENERATE: BLK-001 incrementing__",
+          "type": "blocker",
+          "subtype": "__CLASSIFY: technical | resource | dependency | approval | information | environment | other__",
+          "statement": "__EXTRACT: what is blocked and what is blocking it__",
+          "detail": "__EXTRACT: impact on timeline or deliverables — null if not mentioned__",
+          "owner": "__EXTRACT: speaker_id or role responsible for resolving — 'unassigned' if not clear__",
+          "blocking_since": "__EXTRACT: duration or date if mentioned — null if not mentioned__",
+          "phase": "__EXTRACT: phase affected — null if not mentioned__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids__"],
+          "attributed_to": "__FROM_TRANSCRIPT: speaker_id who raised it__",
+          "confidence": "__DERIVE: float__",
+          "needs_review": true,
+          "tags": ["__GENERATE: 2-4 relevant tags__"]
+        },
+  
+        {
+          "_type_hint": "DISCUSSION POINT — a significant topic discussed that did not produce a formal entity but is worth recording",
+          "entity_id": "__GENERATE: DIS-001 incrementing__",
+          "type": "discussion_point",
+          "subtype": "__CLASSIFY: context | background | clarification | concern | suggestion | feedback | update | other__",
+          "statement": "__EXTRACT: one-sentence summary of what was discussed__",
+          "detail": "__EXTRACT: key points or perspectives raised — null if sufficiently covered in statement__",
+          "raised_by": "__FROM_TRANSCRIPT: speaker_id who introduced the topic__",
+          "phase": "__EXTRACT: phase this relates to — null if general__",
+          "source_utterance_ids": ["__LIST: integer utterance_ids__"],
+          "confidence": "__DERIVE: float__",
+          "needs_review": "__DERIVE: true/false__",
+          "tags": ["__GENERATE: 2-4 relevant tags__"]
+        }
+  
+      ],
+  
+      "roadmap": [
+        {
+          "_note": "Only populate if phases were explicitly discussed. Omit entirely if no phasing was mentioned.",
+          "phase": "__EXTRACT: phase identifier e.g. phase_1__",
+          "label": "__EXTRACT: human-readable label e.g. Phase 1__",
+          "module": "__EXTRACT: primary module or focus area for this phase__",
+          "status": "__CLASSIFY: active | backlog | in_progress | complete | on_hold | undefined__",
+          "description": "__EXTRACT: brief description of what this phase delivers — null if not mentioned__",
+          "entity_ids": ["__LIST: all entity_ids (REQ, DEC, ACT, RISK etc.) scoped to this phase__"]
+        }
+      ],
+  
+      "open_items": [
+        {
+          "_note": "Consolidates all unresolved questions, risks needing review, and blockers into one tracking list.",
+          "entity_id": "__REFERENCE: entity_id of the open item e.g. QST-001, RISK-002, BLK-001__",
+          "type": "__REFERENCE: entity type__",
+          "statement": "__REFERENCE: entity statement (copy)__",
+          "owner": "__REFERENCE: owner or assigned_to from the entity__",
+          "due": "__REFERENCE: due date if applicable, else tbd__"
+        }
+      ],
+  
+      "summary": {
+        "total_entities": "__DERIVE: integer count of all entities__",
+        "by_type": {
+          "requirements":      "__DERIVE: count of type == requirement__",
+          "decisions":         "__DERIVE: count of type == decision__",
+          "action_items":      "__DERIVE: count of type == action_item__",
+          "risks":             "__DERIVE: count of type == risk__",
+          "questions":         "__DERIVE: count of type == question__",
+          "blockers":          "__DERIVE: count of type == blocker__",
+          "discussion_points": "__DERIVE: count of type == discussion_point__"
+        },
+        "requirements_by_subtype": {
+          "functional":     "__DERIVE: count__",
+          "non_functional": "__DERIVE: count__",
+          "security":       "__DERIVE: count__",
+          "compliance":     "__DERIVE: count__",
+          "constraint":     "__DERIVE: count__",
+          "other":          "__DERIVE: count of all remaining requirement subtypes__"
+        },
+        "by_priority": {
+          "high":   "__DERIVE: count of entities with priority == high__",
+          "medium": "__DERIVE: count of entities with priority == medium__",
+          "low":    "__DERIVE: count of entities with priority == low__"
+        },
+        "items_needing_review": ["__LIST: all entity_ids where needs_review == true__"],
+        "unassigned_action_items": ["__LIST: entity_ids of action_items where owner == unassigned__"],
+        "phase_breakdown": {
+          "__EXTRACT: phase_1__": "__DERIVE: count of entities in this phase__",
+          "__EXTRACT: phase_N__": "__DERIVE: count of entities in this phase__",
+          "all_phases": "__DERIVE: count of entities scoped to all_phases__",
+          "unscoped": "__DERIVE: count of entities with phase == null__"
+        },
+        "meeting_health": {
+          "decisions_made":        "__DERIVE: integer — count of decision entities__",
+          "open_questions_count":  "__DERIVE: integer — count of question entities__",
+          "blockers_count":        "__DERIVE: integer — count of blocker entities__",
+          "action_items_assigned": "__DERIVE: integer — count of action_items where owner != unassigned__",
+          "low_confidence_entity_count": "__DERIVE: integer — count of entities with needs_review == true__"
+        }
+      }
+  
+    }
+  }

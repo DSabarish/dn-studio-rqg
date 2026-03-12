@@ -1,7 +1,0 @@
-{
-  "Task": {
-    "description": "Generate a complete, structured BRD document by analyzing a diarized meeting transcript and MoM. Only populate the 'value' fields in the BRD template.",
-    "output": "BRD JSON with all value fields populated"
-  }
-}
-

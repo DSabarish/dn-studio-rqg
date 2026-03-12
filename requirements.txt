@@ -13,6 +13,8 @@ python-docx
 PyYAML
 torch
 google-generativeai
+langchain-google-genai
+langchain-core
 rich
 flask
 flask-cors

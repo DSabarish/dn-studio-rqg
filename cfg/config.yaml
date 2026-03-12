@@ -1,10 +1,10 @@
-project_name: kar
-experiment_name: r002
+project_name: QA Project – Full Flow
+experiment_name: qa-flow-001
 audio:
   format: mp3
   gdrive_url: https://drive.google.com/uc?id=1bg6ZJCHLlOcM00Au1mknhWU7ANM_Fh2F
 meeting:
-  label: kar
+  label: QA_Project_–_Full_Flow
   num_speakers: 2
   company_roster:
   - Alice Johnson
@@ -36,7 +36,7 @@ llm:
   provider: google
   model: models/gemini-2.5-flash
   temperature: 0.7
-  max_output_tokens: 8192
+  max_output_tokens: 65536
   top_p: 0.95
 seed: 42
 paths:
@@ -44,12 +44,12 @@ paths:
   scripts_dir: dn_studio
   outputs_root: outputs
   output_dir: outputs
-  audio: inputs/LMS.mp3
+  audio: C:\Users\Selvam Sabarish\Downloads\dn-studio-rqg\inputs\LMS.mp3
   input_transcript: outputs/diarization/transcript.json
   response_mom: outputs/response-mom.json
   response_brd: outputs/response-brd.json
   prompt_mom: prompts/mom_prompt.json
-  prompt_brd: prompts/brd_prompt.json
+  prompt_brd: prompts/brd_system_prompt.json
   diarization:
     clusters: outputs/diarization/clusters.json
     summary: outputs/diarization/summary.json
@@ -74,5 +74,5 @@ last_run_action: null
 last_run_timestamp: null
 last_run_status: null
 experiment:
-  name: r002
-  context: Learning Management System >> sailee roy >> 12-03-2026 -- 12:33
+  name: qa-flow-001
+  context: 'End-to-end QA: config → diarization → clusters → transcript → MoM → BRD.'

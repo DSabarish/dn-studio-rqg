@@ -178,6 +178,36 @@
     border-radius:8px;padding:14px;white-space:pre;border:1px solid #1e293b;
     font-family:'DM Mono',monospace;line-height:1.55}
 
+  /* BRD JSON Visual */
+  .brd-visual{max-height:78vh;overflow-y:auto;padding:0 2px}
+  .brd-section{background:#0c0c14;border:1px solid #1e293b;border-radius:10px;margin-bottom:10px;overflow:hidden}
+  .brd-section-hdr{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;user-select:none;
+    background:#0f1220;border-bottom:1px solid transparent;transition:background .15s}
+  .brd-section-hdr:hover{background:#111830}
+  .brd-section-hdr.open{border-bottom-color:#1e293b}
+  .brd-section-arrow{color:#475569;font-size:.6rem;transition:transform .2s;flex-shrink:0}
+  .brd-section-hdr.open .brd-section-arrow{transform:rotate(90deg)}
+  .brd-section-title{font-size:.7rem;font-weight:600;color:#93c5fd;letter-spacing:.03em}
+  .brd-section-badge{font-size:.52rem;color:#475569;margin-left:auto;white-space:nowrap}
+  .brd-section-body{padding:12px 14px;display:none}
+  .brd-section-hdr.open+.brd-section-body{display:block}
+  .brd-kv{display:grid;grid-template-columns:140px 1fr;gap:4px 12px;font-size:.65rem;margin-bottom:6px}
+  .brd-kv-key{color:#64748b;font-weight:600;padding:3px 0}
+  .brd-kv-val{color:#cbd5e1;padding:3px 0;word-break:break-word}
+  .brd-tbl{width:100%;border-collapse:collapse;font-size:.62rem;margin:6px 0}
+  .brd-tbl th{background:#1B3A6B;color:#e2e8f0;padding:5px 8px;text-align:left;font-weight:600;font-size:.58rem;letter-spacing:.04em}
+  .brd-tbl td{padding:5px 8px;border-bottom:1px solid #1e293b;color:#cbd5e1}
+  .brd-tbl tr:hover td{background:#0f172a}
+  .brd-list{list-style:none;padding:0;margin:4px 0;font-size:.65rem}
+  .brd-list li{padding:4px 0 4px 14px;color:#cbd5e1;position:relative;line-height:1.5}
+  .brd-list li::before{content:"•";position:absolute;left:0;color:#3b82f6}
+  .brd-para{font-size:.65rem;color:#cbd5e1;line-height:1.65;margin:4px 0 8px}
+  .brd-sub{font-size:.62rem;font-weight:600;color:#60a5fa;margin:10px 0 4px;letter-spacing:.02em}
+  .brd-trace{display:inline-block;font-size:.48rem;color:#7c3aed;background:#7c3aed18;border:1px solid #7c3aed44;
+    border-radius:4px;padding:1px 5px;margin-left:6px;cursor:pointer;vertical-align:middle;transition:background .15s}
+  .brd-trace:hover{background:#7c3aed33}
+  .brd-empty{font-size:.6rem;color:#334155;font-style:italic;padding:4px 0}
+
   .export-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
   @media(max-width:700px){.export-grid{grid-template-columns:1fr}}
   .export-card{background:#0c0c14;border:1px solid #1e293b;border-radius:12px;padding:18px 20px}
@@ -589,7 +619,6 @@
         <div class="section-label" style="margin-bottom:0">t-SNE 2D — d-vector Embeddings</div>
       </div>
       <div id="diar-tsne-plotly" class="plotly-chart"></div>
-      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="diar-tsne-legend"></div>
     </div>
   </div>
   <style>
@@ -614,21 +643,18 @@
         <div class="section-label" style="margin-bottom:0">PCA 2D — d-vector Embeddings</div>
       </div>
       <div id="pca-plotly" class="plotly-chart"></div>
-      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="pca-legend"></div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div class="section-label" style="margin-bottom:0">t-SNE 2D — d-vector Embeddings</div>
       </div>
       <div id="tsne-plotly" class="plotly-chart"></div>
-      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="tsne-legend"></div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div class="section-label" style="margin-bottom:0">t-SNE 3D — d-vector Embeddings</div>
       </div>
       <div id="tsne3d-plotly" class="plotly-chart"></div>
-      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="tsne3d-legend"></div>
     </div>
   </div>
 </div>
@@ -648,13 +674,6 @@
   <div class="card" style="padding:0;overflow:hidden">
     <div class="doc-tab-bar">
       <div style="font-size:.55rem;letter-spacing:.14em;color:#334155">MINUTES OF MEETING</div>
-      <div class="doc-action-bar">
-        <div class="doc-view-toggle">
-          <button class="doc-view-btn active" id="mom-edit-btn" onclick="setMomView('edit')">Edit</button>
-          <button class="doc-view-btn" id="mom-view-btn" onclick="setMomView('view')">Preview</button>
-        </div>
-        <button class="doc-save-btn" onclick="saveMomMd()">💾 Save MoM.md</button>
-      </div>
     </div>
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #1e293b;background:#0a0a12">
       <textarea id="mom-context-input" rows="2"
@@ -673,8 +692,11 @@
     <div id="mom-gen-status" style="display:none;padding:8px 14px;font-size:.6rem;color:#60a5fa;border-bottom:1px solid #1e293b;background:#0a0a12">
       <span id="mom-gen-status-text">Generating…</span>
     </div>
-    <textarea class="doc-editor" id="mom-editor" spellcheck="false" placeholder="MoM will appear here after generation…"></textarea>
-    <div class="doc-viewer" id="mom-viewer" style="display:none"></div>
+    <div id="mom-visual-container" class="brd-visual" style="padding:12px 14px">
+      <div class="brd-empty" style="text-align:center;padding:40px 0">
+        Minutes of Meeting will appear here after generation…
+      </div>
+    </div>
   </div>
 </div>
 
@@ -683,11 +705,7 @@
     <div class="doc-tab-bar">
       <div style="font-size:.55rem;letter-spacing:.14em;color:#334155">BUSINESS REQUIREMENTS DOCUMENT</div>
       <div class="doc-action-bar">
-        <div class="doc-view-toggle">
-          <button class="doc-view-btn active" id="brd-edit-btn" onclick="setBrdView('edit')">Edit</button>
-          <button class="doc-view-btn" id="brd-view-btn" onclick="setBrdView('view')">Preview</button>
-        </div>
-        <button class="doc-save-btn" onclick="saveBrdMd()">💾 Save BRD.md</button>
+        <button class="doc-save-btn" onclick="exportBrdDocx()" id="brd-docx-btn">📄 Download DOCX</button>
       </div>
     </div>
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #1e293b;background:#0a0a12">
@@ -707,8 +725,11 @@
     <div id="brd-gen-status" style="display:none;padding:8px 14px;font-size:.6rem;color:#a78bfa;border-bottom:1px solid #1e293b;background:#0a0a12">
       <span id="brd-gen-status-text">Generating…</span>
     </div>
-    <textarea class="doc-editor" id="brd-editor" spellcheck="false" placeholder="BRD will appear here after generation…"></textarea>
-    <div class="doc-viewer" id="brd-viewer" style="display:none"></div>
+    <div id="brd-visual-container" class="brd-visual" style="padding:12px 14px">
+      <div id="brd-empty-msg" class="brd-empty" style="text-align:center;padding:40px 0">
+        BRD will appear here after generation…
+      </div>
+    </div>
   </div>
 </div>
 
@@ -731,13 +752,8 @@
 
     <div class="export-card">
       <div class="export-card-title">📋 Business Requirements Document</div>
-      <div class="export-card-sub">Export BRD as a professional document</div>
-      <div style="font-size:.6rem;color:#334155;margin-bottom:6px">FORMAT</div>
-      <div class="export-format-row" id="brd-export-formats">
-        <button class="export-fmt-btn selected" data-fmt="pdf" onclick="toggleExportFmt(this,'brd')">PDF</button>
-        <button class="export-fmt-btn" data-fmt="docx" onclick="toggleExportFmt(this,'brd')">Word (.docx)</button>
-      </div>
-      <button class="export-trigger-btn" onclick="triggerExport('brd')">⬇ Export BRD</button>
+      <div class="export-card-sub">Download BRD as a McKinsey-style Word document</div>
+      <button class="export-trigger-btn" onclick="exportBrdDocx()">⬇ Download BRD (.docx)</button>
       <div class="export-status" id="brd-export-status"></div>
     </div>
   </div>
@@ -778,7 +794,7 @@ function hasPendingChanges() { return Object.keys(PENDING_MAP).length > 0; }
 
 let SEGMENTS=[], SPEAKERS=[], CMAP={}, STATS={}, TOTAL=1;
 let activeSpk=null, selectedSeg=null, audioReady=false, lastUttIdx=-1;
-let currentRunId='', _momMdContent='', _brdMdContent='';
+let currentRunId='';
 let _transcriptFilterSpk=null;
 
 const fmtSec = t=>{ const m=Math.floor(t/60),s=Math.floor(t%60); return `${m}:${s.toString().padStart(2,'0')}`; };
@@ -946,10 +962,16 @@ function loadRun(idx) {
 
   activeSpk=null; selectedSeg=null; lastUttIdx=-1; _transcriptFilterSpk=null;
 
-  _momMdContent=b64dec(run.mom_md_b64)||'';
-  _brdMdContent=b64dec(run.brd_md_b64)||'';
-  document.getElementById('mom-editor').value=_momMdContent;
-  document.getElementById('brd-editor').value=_brdMdContent;
+  if (run.mom_trace && typeof run.mom_trace === 'object' && Object.keys(run.mom_trace).length > 0) {
+    renderMomVisual(run.mom_trace);
+  } else {
+    renderMomVisual(null);
+  }
+  if (run.brd_trace && typeof run.brd_trace === 'object' && Object.keys(run.brd_trace).length > 0) {
+    renderBrdVisual(run.brd_trace);
+  } else {
+    renderBrdVisual(null);
+  }
 
   window._rawSegmentsJson=SEGMENTS;
   window._currentRunHasData=!!(run.has_diarization);
@@ -1169,7 +1191,7 @@ async function savePipelineSettings() {
 }
 
 function buildDiarTsne() {
-  buildPlotlyScatter('tsne','diar-tsne-plotly','diar-tsne-legend');
+  buildPlotlyScatter('tsne','diar-tsne-plotly',null);
 }
 
 function buildChips() {
@@ -1315,9 +1337,9 @@ audioEl.addEventListener('timeupdate',()=>{
 
 function buildClustersTab() {
   buildBarCharts();
-  buildPlotlyScatter('pca','pca-plotly','pca-legend');
-  buildPlotlyScatter('tsne','tsne-plotly','tsne-legend');
-  buildPlotly3D('tsne3d-plotly','tsne3d-legend');
+  buildPlotlyScatter('pca','pca-plotly',null);
+  buildPlotlyScatter('tsne','tsne-plotly',null);
+  buildPlotly3D('tsne3d-plotly',null);
 }
 
 function buildBarChart(containerId, data, valFn, labelFn, colorFn) {
@@ -1366,22 +1388,15 @@ function buildPlotlyScatter(key, divId, legId) {
       marker:{color:c.bg, size:18, opacity:1, symbol:'circle',
               line:{color:'#ffffff',width:2}},
       text:[`${displayName(spk)} — centroid`],
-      hovertemplate:'%{text}<extra></extra>', showlegend:true });
+      hovertemplate:'%{text}<extra></extra>', showlegend:false });
   });
   const layout={ paper_bgcolor:'transparent', plot_bgcolor:'#0a0a10',
     margin:{l:30,r:10,t:10,b:30}, font:{family:'DM Mono',size:10,color:'#475569'},
     xaxis:{gridcolor:'#111827',zerolinecolor:'#1e293b',tickfont:{size:9}},
     yaxis:{gridcolor:'#111827',zerolinecolor:'#1e293b',tickfont:{size:9}},
-    legend:{bgcolor:'transparent',font:{size:10,color:'#94a3b8'},
-            orientation:'h',x:0,y:-0.15},
+    showlegend:false,
     height:340 };
   Plotly.newPlot(div,traces,layout,{displayModeBar:false,responsive:true});
-  if(leg) Object.entries(spkGroups).forEach(([spk],i)=>{
-    const c=CMAP[spk]||pal(i);
-    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:5px">
-      <div style="width:10px;height:10px;border-radius:50%;background:${c.bg};border:2px solid #fff"></div>
-      <span style="font-size:.6rem;color:#475569">${displayName(spk)}</span></div>`;
-  });
 }
 
 function buildPlotly3D(divId, legId) {
@@ -1409,7 +1424,7 @@ function buildPlotly3D(divId, legId) {
     traces.push({ x:[cx], y:[cy], z:[cz], mode:'markers', type:'scatter3d', name:displayName(spk),
       marker:{color:c.bg, size:14, opacity:1, line:{color:'#ffffff',width:2}},
       text:[`${displayName(spk)} — centroid`],
-      hovertemplate:'%{text}<extra></extra>', showlegend:true });
+      hovertemplate:'%{text}<extra></extra>', showlegend:false });
   });
   const layout={ paper_bgcolor:'transparent',
     scene:{bgcolor:'#0a0a10',
@@ -1417,15 +1432,9 @@ function buildPlotly3D(divId, legId) {
       yaxis:{gridcolor:'#1e293b',zerolinecolor:'#1e293b',showbackground:false,tickfont:{size:9,color:'#475569'}},
       zaxis:{gridcolor:'#1e293b',zerolinecolor:'#1e293b',showbackground:false,tickfont:{size:9,color:'#475569'}}},
     margin:{l:0,r:0,t:0,b:0},
-    legend:{bgcolor:'transparent',font:{size:10,color:'#94a3b8'},orientation:'h',x:0,y:-0.05},
+    showlegend:false,
     height:340 };
   Plotly.newPlot(div,traces,layout,{displayModeBar:false,responsive:true});
-  if(leg) Object.entries(spkGroups).forEach(([spk],i)=>{
-    const c=CMAP[spk]||pal(i);
-    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:5px">
-      <div style="width:10px;height:10px;border-radius:50%;background:${c.bg};border:2px solid #fff"></div>
-      <span style="font-size:.6rem;color:#475569">${displayName(spk)}</span></div>`;
-  });
 }
 
 function buildTranscript() {
@@ -1479,52 +1488,400 @@ function refreshSpkBtns() {
   });
 }
 
-function setMomView(mode) {
-  const editor=document.getElementById('mom-editor'), viewer=document.getElementById('mom-viewer');
-  const editBtn=document.getElementById('mom-edit-btn'), viewBtn=document.getElementById('mom-view-btn');
-  if(mode==='edit') {
-    editor.style.display=''; viewer.style.display='none';
-    editBtn.classList.add('active'); viewBtn.classList.remove('active');
-  } else {
-    editor.style.display='none'; viewer.style.display='';
-    editBtn.classList.remove('active'); viewBtn.classList.add('active');
-    viewer.innerHTML=mdToHtml(editor.value);
-  }
-}
-async function saveMomMd() {
-  const content=document.getElementById('mom-editor').value;
-  try {
-    const resp=await fetch('/api/save_mom',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({run_id:currentRunId, content})
-    });
-    if(resp.ok) toast('✅ MoM.md saved','ok');
-    else toast('⚠️ Save failed — check Flask server','err',4000);
-  } catch(e) { toast('⚠️ No server — copy content manually','err',4000); }
+/* ── BRD JSON Visual Renderer ─────────────────────────────────────── */
+let _brdTraceData = null;
+
+function _brdVal(obj, key) {
+  if (!obj || typeof obj !== 'object') return null;
+  const x = obj[key];
+  if (x && typeof x === 'object' && 'value' in x) return x.value;
+  return x !== undefined ? x : null;
 }
 
-function setBrdView(mode) {
-  const editor=document.getElementById('brd-editor'), viewer=document.getElementById('brd-viewer');
-  const editBtn=document.getElementById('brd-edit-btn'), viewBtn=document.getElementById('brd-view-btn');
-  if(mode==='edit') {
-    editor.style.display=''; viewer.style.display='none';
-    editBtn.classList.add('active'); viewBtn.classList.remove('active');
-  } else {
-    editor.style.display='none'; viewer.style.display='';
-    editBtn.classList.remove('active'); viewBtn.classList.add('active');
-    viewer.innerHTML=mdToHtml(editor.value);
-  }
+function _brdTrace(obj, key) {
+  if (!obj || typeof obj !== 'object') return null;
+  const x = obj[key];
+  if (x && typeof x === 'object' && 'trace' in x) return x.trace;
+  return null;
 }
-async function saveBrdMd() {
-  const content=document.getElementById('brd-editor').value;
-  try {
-    const resp=await fetch('/api/save_brd',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({run_id:currentRunId, content})
+
+function _traceHtml(trace) {
+  if (!trace) return '';
+  const arr = Array.isArray(trace) ? trace : [trace];
+  return arr.map(t => {
+    const spk = t.speaker || t.speaker_name || '';
+    const ts = typeof t.start === 'number' ? t.start : (typeof t.timestamp === 'number' ? t.timestamp : null);
+    const label = spk + (ts !== null ? ' @ ' + ts.toFixed(1) + 's' : '');
+    const seek = ts !== null ? ` onclick="seekAudio(${ts})"` : '';
+    const title = t.text ? t.text.substring(0, 120) : '';
+    return `<span class="brd-trace" title="${title.replace(/"/g,'&quot;')}"${seek}>${label}</span>`;
+  }).join(' ');
+}
+
+function _kvRow(key, val, trace) {
+  if (val === null || val === undefined || val === '') return '';
+  return `<div class="brd-kv-key">${key}</div><div class="brd-kv-val">${String(val)}${_traceHtml(trace)}</div>`;
+}
+
+function _listHtml(arr, traceArr) {
+  if (!Array.isArray(arr) || !arr.length) return '<div class="brd-empty">Not available</div>';
+  const traces = !traceArr ? [] : (Array.isArray(traceArr) ? traceArr : [traceArr]);
+  return '<ul class="brd-list">' + arr.map((item, i) => {
+    const t = traces[i] || traces[0] || null;
+    return `<li>${String(item)}${_traceHtml(t)}</li>`;
+  }).join('') + '</ul>';
+}
+
+function _tableHtml(headers, rows, traceRows) {
+  if (!rows || !rows.length) return '<div class="brd-empty">No data</div>';
+  const tRows = Array.isArray(traceRows) ? traceRows : [];
+  let h = '<table class="brd-tbl"><thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr></thead><tbody>';
+  rows.forEach((r, rowIdx) => {
+    const cellTraces = Array.isArray(tRows[rowIdx]) ? tRows[rowIdx] : [];
+    h += '<tr>' + r.map((c, colIdx) => {
+      const t = cellTraces[colIdx] || null;
+      return `<td>${c || '—'}${_traceHtml(t)}</td>`;
+    }).join('') + '</tr>';
+  });
+  return h + '</tbody></table>';
+}
+
+function _section(title, bodyHtml, badge, openByDefault) {
+  const cls = openByDefault ? ' open' : '';
+  return `<div class="brd-section"><div class="brd-section-hdr${cls}" onclick="this.classList.toggle('open')">` +
+    `<span class="brd-section-arrow">▶</span><span class="brd-section-title">${title}</span>` +
+    (badge ? `<span class="brd-section-badge">${badge}</span>` : '') +
+    `</div><div class="brd-section-body">${bodyHtml}</div></div>`;
+}
+
+function renderBrdVisual(brd) {
+  if (!brd || typeof brd !== 'object' || Object.keys(brd).length === 0) {
+    document.getElementById('brd-visual-container').innerHTML =
+      '<div class="brd-empty" style="text-align:center;padding:40px 0">BRD will appear here after generation…</div>';
+    return;
+  }
+  _brdTraceData = brd;
+  let html = '';
+
+  // Header
+  const H = brd['Header'] || {};
+  const hKeys = ['Project Name','Version','Date','Business Unit','Project Type','Deployment Model',
+    'Primary Data Store','Compute Engine','Infrastructure','Document Status'];
+  let hBody = '<div class="brd-kv">';
+  hKeys.forEach(k => { hBody += _kvRow(k, _brdVal(H, k), _brdTrace(H, k)); });
+  hBody += '</div>';
+  html += _section('Header', hBody, '', true);
+
+  // Project Details
+  const PD = brd['0. Project Details'] || {};
+  let pdBody = '';
+  const ov = _brdVal(PD, 'Project Overview');
+  if (ov) pdBody += `<div class="brd-sub">Project Overview</div><div class="brd-para">${ov}${_traceHtml(_brdTrace(PD,'Project Overview'))}</div>`;
+  const bn = _brdVal(PD, 'Business Need');
+  if (bn) pdBody += `<div class="brd-sub">Business Need</div><div class="brd-para">${bn}${_traceHtml(_brdTrace(PD,'Business Need'))}</div>`;
+  const sc = _brdVal(PD, 'Success Criteria');
+  if (Array.isArray(sc) && sc.length) {
+    pdBody += `<div class="brd-sub">Success Criteria</div>` + _listHtml(sc, null);
+  }
+  html += _section('0. Project Details', pdBody || '<div class="brd-empty">Not available</div>',
+    sc ? sc.length + ' criteria' : '', true);
+
+  // Document Revisions
+  const DR = brd['0. Document Revisions'] || {};
+  const revItems = DR.items || [];
+  const revArr = Array.isArray(revItems) ? revItems : [];
+  const revRows = revArr.map(r => [_brdVal(r,'Version')||'', _brdVal(r,'Date')||'', _brdVal(r,'Author')||'', _brdVal(r,'Description')||'']);
+  html += _section('0. Document Revisions', _tableHtml(['Version','Date','Author','Description'], revRows), revRows.length + ' revisions');
+
+  // Stakeholder Approvals
+  const SA = brd['0. Stakeholder Approvals'] || {};
+  const saItems = SA.items || [];
+  const saArr = Array.isArray(saItems) ? saItems : [];
+  const saRows = saArr.map(a => [_brdVal(a,'Name')||'', _brdVal(a,'Role')||'', _brdVal(a,'Status')||'']);
+  html += _section('0. Stakeholder Approvals', _tableHtml(['Name','Role','Status'], saRows), saRows.length + ' approvers');
+
+  // Introduction
+  const I = brd['1. Introduction'] || {};
+  let iBody = '';
+  const ps = _brdVal(I, '1.1 Project Summary');
+  if (ps) iBody += `<div class="brd-sub">1.1 Project Summary</div><div class="brd-para">${ps}${_traceHtml(_brdTrace(I,'1.1 Project Summary'))}</div>`;
+  const objItems = (I['1.2 Objectives'] || {}).items || {};
+  const pri = _brdVal(objItems, 'Primary') || [];
+  const sec = _brdVal(objItems, 'Secondary') || [];
+  if (pri.length || sec.length) {
+    iBody += '<div class="brd-sub">1.2 Objectives — Primary</div>' + _listHtml(Array.isArray(pri)?pri:[], null);
+    iBody += '<div class="brd-sub">1.2 Objectives — Secondary</div>' + _listHtml(Array.isArray(sec)?sec:[], null);
+  }
+  const bg = _brdVal(I, '1.3 Background & Business Context');
+  if (bg) iBody += `<div class="brd-sub">1.3 Background</div><div class="brd-para">${bg}${_traceHtml(_brdTrace(I,'1.3 Background & Business Context'))}</div>`;
+  const bd = _brdVal(I, '1.4 Business Drivers');
+  if (Array.isArray(bd) && bd.length) iBody += '<div class="brd-sub">1.4 Business Drivers</div>' + _listHtml(bd, null);
+  html += _section('1. Introduction', iBody || '<div class="brd-empty">Not available</div>', '', true);
+
+  // Scope
+  const S = brd['2. Project Scope'] || {};
+  let sBody = '';
+  const ins = _brdVal(S, '2.1 In-Scope Functionality');
+  if (Array.isArray(ins) && ins.length) sBody += '<div class="brd-sub">2.1 In-Scope</div>' + _listHtml(ins, null);
+  const outs = _brdVal(S, '2.2 Out-of-Scope Functionality');
+  if (Array.isArray(outs) && outs.length) sBody += '<div class="brd-sub">2.2 Out-of-Scope</div>' + _listHtml(outs, null);
+  const phItems = (S['2.3 Phasing Plan'] || {}).items || {};
+  const phKeys = Object.keys(phItems).sort();
+  if (phKeys.length) {
+    const phRows = phKeys.map(k => { const v = phItems[k]; return [k, typeof v === 'object' ? (_brdVal(v,'') || v.value || JSON.stringify(v)) : String(v)]; });
+    sBody += '<div class="brd-sub">2.3 Phasing Plan</div>' + _tableHtml(['Phase','Scope'], phRows);
+  }
+  html += _section('2. Project Scope', sBody || '<div class="brd-empty">Not available</div>', ins ? ins.length + ' in-scope' : '');
+
+  // System Perspective
+  const SP = brd['3. System Perspective'] || {};
+  let spBody = '';
+  const assump = _brdVal(SP, '3.1 Assumptions');
+  if (Array.isArray(assump) && assump.length) spBody += '<div class="brd-sub">3.1 Assumptions</div>' + _listHtml(assump, null);
+  const constr = _brdVal(SP, '3.2 Constraints');
+  if (Array.isArray(constr) && constr.length) spBody += '<div class="brd-sub">3.2 Constraints</div>' + _listHtml(constr, null);
+  const riskSec = SP['3.3 Risks'] || {};
+  const riskItems = riskSec.items || [];
+  if (Array.isArray(riskItems) && riskItems.length) {
+    const riskRows = riskItems.map(r => [_brdVal(r,'Risk')||'', _brdVal(r,'Mitigation')||'']);
+    spBody += '<div class="brd-sub">3.3 Risks</div>' + _tableHtml(['Risk','Mitigation'], riskRows);
+  }
+  html += _section('3. System Perspective', spBody || '<div class="brd-empty">Not available</div>',
+    riskItems.length ? riskItems.length + ' risks' : '');
+
+  // Business Process
+  const BP = brd['4. Business Process Overview'] || {};
+  let bpBody = '';
+  const asIs = _brdVal(BP, '4.1 Current Process (As-Is)');
+  if (Array.isArray(asIs) && asIs.length) bpBody += '<div class="brd-sub">4.1 As-Is</div>' + _listHtml(asIs, null);
+  const toBe = _brdVal(BP, '4.2 Proposed Process (To-Be)');
+  if (Array.isArray(toBe) && toBe.length) bpBody += '<div class="brd-sub">4.2 To-Be</div>' + _listHtml(toBe, null);
+  html += _section('4. Business Process', bpBody || '<div class="brd-empty">Not available</div>');
+
+  // KPIs
+  const KP = brd['5. KPI & Success Metrics'] || {};
+  const kpItems = KP.items || [];
+  const kpRows = (Array.isArray(kpItems) ? kpItems : []).map(k => [_brdVal(k,'Metric')||'', _brdVal(k,'Target')||'']);
+  html += _section('5. KPI & Success Metrics', _tableHtml(['Metric','Target'], kpRows), kpRows.length + ' KPIs');
+
+  // Functional Requirements
+  const FR = brd['6. Functional Requirements'] || {};
+  let frBody = '';
+  const frKeys = Object.keys(FR).filter(k => k.startsWith('6.')).sort();
+  frKeys.forEach(k => {
+    const val = _brdVal(FR, k);
+    const reqs = Array.isArray(val) ? val : [];
+    frBody += `<div class="brd-sub">${k} (${reqs.length})</div>`;
+    if (reqs.length) {
+      const rows = reqs.map((r, i) => [String(i+1), String(r)]);
+      frBody += _tableHtml(['#','Requirement'], rows);
+    } else {
+      frBody += '<div class="brd-empty">TBD</div>';
+    }
+  });
+  const totalFr = frKeys.reduce((s,k) => s + (Array.isArray(_brdVal(FR,k)) ? _brdVal(FR,k).length : 0), 0);
+  html += _section('6. Functional Requirements', frBody || '<div class="brd-empty">Not available</div>',
+    totalFr + ' requirements', true);
+
+  // NFR
+  const NF = brd['7. Non-Functional Requirements'] || {};
+  let nfBody = '';
+  ['7.1 Performance & Scalability','7.2 Availability & Reliability','7.3 Usability & Accessibility',
+   '7.4 Security & Access Control','7.5 Compliance & Regulatory'].forEach(k => {
+    const val = _brdVal(NF, k);
+    if (Array.isArray(val) && val.length) {
+      nfBody += `<div class="brd-sub">${k}</div>` + _listHtml(val, null);
+    }
+  });
+  html += _section('7. Non-Functional Requirements', nfBody || '<div class="brd-empty">Not available</div>');
+
+  // Data Governance
+  const DG = brd['8. Data Governance & Privacy'] || {};
+  let dgBody = '';
+  const dc = _brdVal(DG, '8.1 Data Classification');
+  if (dc && typeof dc === 'object' && !Array.isArray(dc)) {
+    const dcRows = Object.entries(dc).map(([k,v]) => [k, String(v)]);
+    dgBody += '<div class="brd-sub">8.1 Data Classification</div>' + _tableHtml(['Data Asset','Classification'], dcRows);
+  }
+  const pc = _brdVal(DG, '8.2 Data Privacy Checklist');
+  if (Array.isArray(pc) && pc.length) dgBody += '<div class="brd-sub">8.2 Privacy Checklist</div>' + _listHtml(pc, null);
+  html += _section('8. Data Governance & Privacy', dgBody || '<div class="brd-empty">Not available</div>');
+
+  // Tech Stack
+  const TA = brd['9. Technology Stack & Architecture'] || {};
+  let taBody = '';
+  const ts = _brdVal(TA, '9.1 Proposed Technology Stack');
+  if (ts && typeof ts === 'object' && !Array.isArray(ts)) {
+    const tsRows = Object.entries(ts).map(([k,v]) => [k, String(v)]);
+    taBody += _tableHtml(['Layer','Technology'], tsRows);
+  }
+  const flow = _brdVal(TA, '9.2 Architecture Diagram');
+  if (flow && flow.Flow && Array.isArray(flow.Flow)) {
+    taBody += '<div class="brd-sub">Architecture Flow</div>' + _listHtml(flow.Flow, null);
+  }
+  html += _section('9. Technology Stack', taBody || '<div class="brd-empty">Not available</div>');
+
+  // Appendices
+  const AP = brd['10. Appendices'] || {};
+  let apBody = '';
+  const gl = _brdVal(AP, '10.1 Glossary of Terms');
+  if (gl && typeof gl === 'object' && !Array.isArray(gl)) {
+    const glRows = Object.entries(gl).sort().map(([k,v]) => [k, String(v)]);
+    apBody += '<div class="brd-sub">10.1 Glossary</div>' + _tableHtml(['Term','Definition'], glRows);
+  }
+  const acr = _brdVal(AP, '10.2 List of Acronyms');
+  if (Array.isArray(acr) && acr.length) apBody += '<div class="brd-sub">10.2 Acronyms</div><div class="brd-para">' + acr.join(', ') + '</div>';
+  const rd = _brdVal(AP, '10.3 Related Documents');
+  if (Array.isArray(rd) && rd.length) apBody += '<div class="brd-sub">10.3 Related Documents</div>' + _listHtml(rd, null);
+  const so = _brdVal(AP, '10.4 Document Sign-Off');
+  if (so) {
+    const soArr = Array.isArray(so) ? so : (so.items || []);
+    if (soArr.length) {
+      const soRows = soArr.map(s => [s.Name||'', s.Role||'', s.Date||'']);
+      apBody += '<div class="brd-sub">10.4 Sign-Off</div>' + _tableHtml(['Name','Role','Date'], soRows);
+    }
+  }
+  html += _section('10. Appendices', apBody || '<div class="brd-empty">Not available</div>');
+
+  document.getElementById('brd-visual-container').innerHTML = html;
+}
+
+function seekAudio(ts) {
+  const el = document.getElementById('audio-player');
+  if (el && el.src) { el.currentTime = ts; el.play().catch(()=>{}); }
+}
+
+/* ── MoM JSON Visual Renderer ─────────────────────────────────────── */
+
+function renderMomVisual(mom) {
+  const container = document.getElementById('mom-visual-container');
+  if (!container) return;
+  if (!mom || typeof mom !== 'object' || Object.keys(mom).length === 0) {
+    container.innerHTML = '<div class="brd-empty" style="text-align:center;padding:40px 0">Minutes of Meeting will appear here after generation…</div>';
+    return;
+  }
+
+  let html = '';
+
+  // Meeting context
+  const ctx = mom.meeting_context || {};
+  let ctxBody = '<div class="brd-kv">';
+  ctxBody += _kvRow('Title', _brdVal(ctx, 'title'), null);
+  ctxBody += _kvRow('Date', _brdVal(ctx, 'date'), null);
+  ctxBody += _kvRow('Start Time', _brdVal(ctx, 'time_start'), null);
+  ctxBody += _kvRow('End Time', _brdVal(ctx, 'time_end'), null);
+  const durSec = _brdVal(ctx, 'duration_seconds');
+  ctxBody += _kvRow('Duration (s)', durSec, null);
+  ctxBody += _kvRow('Meeting Type', _brdVal(ctx, 'meeting_type'), null);
+  ctxBody += _kvRow('Project Name', _brdVal(ctx, 'project') && _brdVal(ctx.project || {}, 'name'), null);
+  ctxBody += _kvRow('Client', _brdVal(ctx, 'project') && _brdVal(ctx.project || {}, 'client'), null);
+  ctxBody += _kvRow('Domain', _brdVal(ctx, 'project') && _brdVal(ctx.project || {}, 'domain'), null);
+  ctxBody += _kvRow('Document Ref', _brdVal(ctx, 'document_ref'), null);
+  ctxBody += _kvRow('Language', _brdVal(ctx, 'language'), null);
+  ctxBody += '</div>';
+  html += _section('Meeting Context', ctxBody, '', true);
+
+  // Participants
+  const participants = mom.participants || [];
+  if (Array.isArray(participants) && participants.length) {
+    const rows = [];
+    participants.forEach(p => {
+      rows.push([
+        _brdVal(p, 'speaker_id') || '',
+        _brdVal(p, 'name') || '',
+        _brdVal(p, 'role') || '',
+        _brdVal(p, 'organisation') || '',
+        String(_brdVal(p, 'utterance_count') || ''),
+        String(_brdVal(p, 'total_speaking_seconds') || ''),
+      ]);
     });
-    if(resp.ok) toast('✅ BRD.md saved','ok');
-    else toast('⚠️ Save failed — check Flask server','err',4000);
-  } catch(e) { toast('⚠️ No server — copy content manually','err',4000); }
+    html += _section(
+      'Participants',
+      _tableHtml(['Speaker', 'Name', 'Role', 'Org', 'Utterances', 'Seconds'], rows, null),
+      participants.length + ' participants'
+    );
+  }
+
+  // Transcript stats
+  const stats = mom.transcript_stats || {};
+  if (stats && Object.keys(stats).length) {
+    let stBody = '<div class="brd-kv">';
+    stBody += _kvRow('Total Utterances', _brdVal(stats, 'total_utterances'), null);
+    stBody += _kvRow('Avg Confidence', _brdVal(stats, 'avg_confidence'), null);
+    stBody += _kvRow('Min Confidence', _brdVal(stats, 'min_confidence'), null);
+    stBody += _kvRow('Max Confidence', _brdVal(stats, 'max_confidence'), null);
+    stBody += _kvRow('Dominant Speaker', _brdVal(stats, 'dominant_speaker'), null);
+    const lows = _brdVal(stats, 'low_confidence_utterances');
+    if (Array.isArray(lows) && lows.length) {
+      stBody += '<div class="brd-kv-key">Low-confidence utterances</div><div class="brd-kv-val">' + lows.join(', ') + '</div>';
+    }
+    stBody += '</div>';
+    html += _section('Transcript Stats', stBody, '', false);
+  }
+
+  // Entities grouped by type
+  const entities = Array.isArray(mom.entities) ? mom.entities : [];
+  if (entities.length) {
+    const groups = {};
+    entities.forEach(e => {
+      const t = (e.type || 'other').toString();
+      if (!groups[t]) groups[t] = [];
+      groups[t].push(e);
+    });
+
+    Object.keys(groups).sort().forEach(typeKey => {
+      const ents = groups[typeKey];
+      const rows = [];
+      const traceRows = [];
+      ents.forEach(ent => {
+        const id = ent.entity_id || '';
+        const stmt = ent.statement || '';
+        const owner = ent.owner || ent.attributed_to || '';
+        const phase = ent.phase || '';
+        rows.push([id, stmt, owner, phase]);
+        traceRows.push([null, ent.trace || null, null, null]);
+      });
+      const title = `Entities: ${typeKey}`;
+      html += _section(
+        title,
+        _tableHtml(['ID', 'Statement', 'Owner', 'Phase'], rows, traceRows),
+        rows.length + ' items',
+        typeKey === 'decision' || typeKey === 'action_item'
+      );
+    });
+  }
+
+  container.innerHTML = html || '<div class="brd-empty">No MoM entities yet.</div>';
+}
+
+async function exportBrdDocx() {
+  const btn = document.getElementById('brd-docx-btn');
+  const statusEl = document.getElementById('brd-export-status');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating DOCX…'; }
+  if (statusEl) statusEl.textContent = 'Generating…';
+  try {
+    const resp = await fetch('/api/export_brd_docx', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({run_id: currentRunId})
+    });
+    if (resp.ok && resp.headers.get('content-type')?.includes('application')) {
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = resp.headers.get('content-disposition')?.split('filename=')[1]?.replace(/"/g,'') || 'BRD.docx';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+      toast('✅ BRD DOCX downloaded', 'ok');
+      if (statusEl) statusEl.textContent = '✅ Downloaded';
+    } else {
+      const d = await resp.json().catch(() => ({error:'Server error'}));
+      toast('⚠️ ' + (d.error || 'Export failed'), 'err', 5000);
+      if (statusEl) statusEl.textContent = '⚠️ ' + (d.error || 'Failed');
+    }
+  } catch(e) {
+    toast('⚠️ Cannot reach server', 'err', 5000);
+    if (statusEl) statusEl.textContent = '⚠️ Server unreachable';
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '📄 Download DOCX'; }
 }
 
 function mdToHtml(md) {
@@ -1594,9 +1951,8 @@ async function generateMom() {
       body: JSON.stringify({run_id: currentRunId, context: ctx})
     });
     const d = await resp.json();
-    if (d.ok && d.mom_md) {
-      document.getElementById('mom-editor').value = d.mom_md;
-      setMomView('edit');
+    if (d.ok && d.mom_trace) {
+      renderMomVisual(d.mom_trace);
       toast('✅ Minutes generated successfully', 'ok');
       statusTxt.textContent = '✅ Done';
     } else {
@@ -1623,11 +1979,10 @@ async function generateBrd() {
       body: JSON.stringify({run_id: currentRunId, context: ctx})
     });
     const d = await resp.json();
-    if (d.ok && d.brd_md) {
-      document.getElementById('brd-editor').value = d.brd_md;
-      setBrdView('edit');
+    if (d.ok && d.brd_trace) {
+      renderBrdVisual(d.brd_trace);
       toast('✅ BRD generated successfully', 'ok');
-      statusTxt.textContent = '✅ Done';
+      statusTxt.textContent = '✅ Done — ' + Object.keys(d.brd_trace).length + ' sections';
     } else {
       toast('⚠️ Generation failed: ' + (d.error || 'unknown error'), 'err', 5000);
       statusTxt.textContent = '⚠️ ' + (d.error || 'Generation failed');

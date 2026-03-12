@@ -20,6 +20,8 @@ import yaml as _yaml
 
 from . import config
 from .diarization_pipeline import run_pipeline
+from .generalised_mom_generator import build_markdown as build_mom_markdown
+from .brd_llm import _brd_to_markdown
 
 app = Flask(__name__)
 CORS(app)
@@ -96,8 +98,17 @@ def _b64(s: str) -> str:
 
 
 def _run_dir(run_id: str) -> Path:
+    """
+    Resolve a logical run_id to a concrete folder on disk.
+
+    - For explicit GCS runs (e.g. `proj/exp/run`), we map under GCS_ROOT.
+    - For \"current\", we prefer the latest GCS experiment folder if one
+      exists (so exports land under the project/experiment run), and fall
+      back to the raw OUTPUT_DIR diarization folder.
+    """
     if not run_id or run_id.strip().lower() == "current":
-        return Path(OUTPUT_DIR)
+        gcs_path = Path(_gcs_folder_for_current())
+        return gcs_path
     return GCS_ROOT / run_id.strip()
 
 
@@ -186,18 +197,39 @@ def _build_run_payload(
 
     minutes_dir = dir_path / "minutes"
     if minutes_dir.exists():
-        for p in minutes_dir.glob("MoM*.md"):
-            payload["mom_md_b64"] = _b64(p.read_text(encoding="utf-8"))
-            break
-        for p in minutes_dir.glob("MoM*.json"):
-            payload["mom_json_b64"] = _b64(p.read_text(encoding="utf-8"))
-            break
+        mom_json_file = next(minutes_dir.glob("MoM*.json"), None)
+        if mom_json_file and mom_json_file.exists():
+            try:
+                # Always render a fresh MoM view from JSON so the frontend
+                # has a proper document even if no markdown file exists.
+                doc_json = json.loads(mom_json_file.read_text(encoding="utf-8"))
+                mom_md = build_mom_markdown(doc_json)
+                payload["mom_md_b64"] = _b64(mom_md)
+                payload["mom_json_b64"] = _b64(mom_json_file.read_text(encoding="utf-8"))
+            except Exception:
+                pass
 
-    brd_dir = dir_path / "brd"
-    if brd_dir.exists():
-        for p in brd_dir.glob("BRD*.md"):
-            payload["brd_md_b64"] = _b64(p.read_text(encoding="utf-8"))
-            break
+    mom_trace_file = dir_path / "response_mom_trace.json"
+    if mom_trace_file.exists():
+        try:
+            payload["mom_trace"] = json.loads(mom_trace_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    brd_trace_file = dir_path / "response_brd_trace.json"
+    if brd_trace_file.exists():
+        try:
+            brd_trace = json.loads(brd_trace_file.read_text(encoding="utf-8"))
+            payload["brd_trace"] = brd_trace
+            # Render a BRD view on the fly from the enriched trace JSON so
+            # the frontend always shows a proper document if JSON exists.
+            try:
+                brd_md = _brd_to_markdown(brd_trace)
+                payload["brd_md_b64"] = _b64(brd_md)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     return payload
 
@@ -815,9 +847,11 @@ def api_upload_audio() -> Any:
     allowed = {".mp3", ".m4a", ".wav", ".ogg", ".webm", ".mp4"}
     if ext not in allowed:
         return jsonify({"ok": False, "error": f"Unsupported audio type: {ext}"}), 400
-    audio_dir = Path(OUTPUT_DIR)
+    # Always store uploaded audio under the repo's inputs/ folder so
+    # paths are stable across local runs and Google Colab.
+    audio_dir = PROJECT_ROOT / "inputs"
     audio_dir.mkdir(parents=True, exist_ok=True)
-    dest = audio_dir / f"uploaded_audio{ext}"
+    dest = audio_dir / safe_name
     f.save(str(dest))
     manifest_path = audio_dir / "run_manifest.json"
     manifest: Dict[str, Any] = {}
@@ -871,12 +905,173 @@ def api_serve_audio() -> Any:
 
 @app.route("/api/generate_mom", methods=["POST"])
 def api_generate_mom() -> Any:
-    return jsonify({"ok": False, "error": "MoM LLM generation not configured."}), 501
+    try:
+        data = request.get_json(silent=True) or {}
+        run_id = (data.get("run_id") or "").strip() or "current"
+        context = data.get("context", "") or ""
+
+        root = _run_dir(run_id)
+        transcript_path = root / "transcript.json"
+        if not transcript_path.exists():
+            return jsonify({"ok": False, "error": "transcript.json not found — run diarization first."}), 404
+
+        manifest_path = root / "run_manifest.json"
+        if manifest_path.exists():
+            try:
+                mf = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not context:
+                    context = mf.get("context", "") or ""
+            except Exception:
+                pass
+
+        from .mom_llm import generate_mom
+
+        result = generate_mom(
+            transcript_path=str(transcript_path),
+            output_dir=str(root),
+            context=context,
+        )
+
+        if not result.get("ok"):
+            return jsonify({"ok": False, "error": result.get("error", "MoM generation failed")}), 500
+
+        mom_md = result.get("mom_md", "")
+
+        mom_trace_json = {}
+        trace_path = Path(result.get("mom_trace_path", ""))
+        if trace_path.exists():
+            try:
+                mom_trace_json = json.loads(trace_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        return jsonify({
+            "ok": True,
+            "mom_md": mom_md,
+            "mom_trace": mom_trace_json,
+            "mom_json_path": result.get("mom_json_path", ""),
+            "mom_trace_path": result.get("mom_trace_path", ""),
+            "mom_doc_path": result.get("mom_doc_path", ""),
+        })
+    except Exception as exc:
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 @app.route("/api/generate_brd", methods=["POST"])
 def api_generate_brd() -> Any:
-    return jsonify({"ok": False, "error": "BRD LLM generation not configured."}), 501
+    try:
+        data = request.get_json(silent=True) or {}
+        run_id = (data.get("run_id") or "").strip() or "current"
+        context = data.get("context", "") or ""
+
+        root = _run_dir(run_id)
+        transcript_path = root / "transcript.json"
+        if not transcript_path.exists():
+            return jsonify({"ok": False, "error": "transcript.json not found — run diarization first."}), 404
+
+        manifest_path = root / "run_manifest.json"
+        if manifest_path.exists():
+            try:
+                mf = json.loads(manifest_path.read_text(encoding="utf-8"))
+                if not context:
+                    context = mf.get("context", "") or ""
+            except Exception:
+                pass
+
+        from .brd_llm import generate_brd
+        result = generate_brd(
+            transcript_path=str(transcript_path),
+            output_dir=str(root),
+            context=context,
+        )
+
+        if not result.get("ok"):
+            return jsonify({"ok": False, "error": result.get("error", "BRD generation failed")}), 500
+
+        brd_trace_json = {}
+        trace_path = Path(result.get("brd_trace_path", ""))
+        if trace_path.exists():
+            try:
+                brd_trace_json = json.loads(trace_path.read_text(encoding="utf-8"))
+            except Exception:
+                pass
+
+        # Mirror the MoM API shape: return the markdown so the dashboard
+        # editor can populate immediately after generation.
+        brd_md = result.get("brd_md", "")
+
+        return jsonify({
+            "ok": True,
+            "brd_md": brd_md,
+            "brd_trace": brd_trace_json,
+            "brd_json_path": result.get("brd_json_path", ""),
+            "brd_trace_path": result.get("brd_trace_path", ""),
+            "brd_md_path": result.get("brd_md_path", ""),
+        })
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@app.route("/api/export_brd_docx", methods=["POST"])
+def api_export_brd_docx() -> Any:
+    """Generate McKinsey-style BRD DOCX from response_brd_trace.json and download."""
+    try:
+        data = request.get_json(silent=True) or {}
+        run_id = (data.get("run_id") or "").strip() or "current"
+        root = _run_dir(run_id)
+
+        trace_path = root / "response_brd_trace.json"
+        if not trace_path.exists():
+            return jsonify({"ok": False, "error": "response_brd_trace.json not found — generate BRD first."}), 404
+
+        from .generalised_brd_generator import parse_brd, build_js, ensure_docx_package
+        import subprocess
+
+        brd_data = json.loads(trace_path.read_text(encoding="utf-8"))
+        ctx = parse_brd(brd_data)
+        js_code = build_js(ctx)
+
+        script_dir = Path(__file__).resolve().parent
+        ensure_docx_package(script_dir)
+
+        tmp_js = script_dir / "_brd_export_tmp.js"
+        tmp_js.write_text(js_code, encoding="utf-8")
+
+        out_dir = root / "exports"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        docx_path = out_dir / "BRD.docx"
+
+        import sys
+        node_cmd = "node.exe" if sys.platform == "win32" else "node"
+        result = subprocess.run(
+            [node_cmd, str(tmp_js), str(docx_path)],
+            capture_output=True, text=True, cwd=str(script_dir), timeout=60,
+        )
+
+        try:
+            tmp_js.unlink()
+        except Exception:
+            pass
+
+        if result.returncode != 0 or not docx_path.exists():
+            err = result.stderr or result.stdout or "Node.js DOCX generation failed"
+            return jsonify({"ok": False, "error": err}), 500
+
+        return send_file(
+            str(docx_path),
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            as_attachment=True,
+            download_name=f"BRD_{ctx.get('project_name', 'document')[:30].replace(' ', '_')}.docx",
+        )
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 def _export_pdf(md_text: str, out_path: Path) -> None:
