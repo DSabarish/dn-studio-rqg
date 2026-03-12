@@ -33,7 +33,7 @@ outputs/
 gcs/
 
 # ── Audio inputs (large binary files) ────────────────
-inputs/
+# inputs/
 
 # ── Code backup archives ─────────────────────────────
 code_backup/
