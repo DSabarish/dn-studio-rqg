@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DN-Studio — Project Console</title>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Unbounded:wght@600;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{background:#09090e;color:#e2e8f0;font-family:'DM Mono',monospace;min-height:100vh;padding:24px 28px}
+  h1{font-family:'Unbounded',sans-serif;font-size:1.45rem;font-weight:800;
+     background:linear-gradient(90deg,#60a5fa,#34d399,#fbbf24);
+     -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+  .subtitle{font-size:0.62rem;letter-spacing:0.08em;color:#475569;margin-bottom:8px}
+  .card{background:#0c0c14;border:1px solid #1e293b;border-radius:12px;padding:18px 22px;margin-bottom:16px}
+  .section-label{font-size:0.58rem;letter-spacing:0.16em;color:#334155;text-transform:uppercase;margin-bottom:10px}
+
+  .top-nav{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+  .run-select-wrap{display:flex;align-items:center;gap:8px}
+  .run-select-wrap label{font-size:.6rem;color:#475569;letter-spacing:.08em;white-space:nowrap}
+  #run-select{background:#111827;border:1px solid #1e293b;color:#e2e8f0;
+               font-family:inherit;font-size:.65rem;padding:5px 10px;border-radius:8px;cursor:pointer;min-width:260px}
+  #run-select:focus{outline:2px solid #3b82f6}
+
+  .tabs{display:flex;gap:3px;background:#0f0f17;border-radius:8px;padding:3px;width:fit-content;flex-wrap:wrap}
+  .tab{padding:7px 18px;border-radius:6px;border:none;font-family:inherit;font-size:.62rem;
+        letter-spacing:0.06em;cursor:pointer;background:transparent;color:#475569;transition:all .15s;white-space:nowrap}
+  .tab.active{background:#1e293b;color:#e2e8f0}
+
+  .audio-player{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;
+                background:#0c0c14;border:1px solid #1e293b;border-radius:12px;margin-bottom:16px}
+  .audio-info{min-width:180px}
+  .audio-name{color:#94a3b8;font-size:.68rem;margin-bottom:2px}
+  .audio-hint{font-size:.56rem;color:#334155}
+  audio#audio-el{flex:1;min-width:220px;height:32px;accent-color:#3b82f6}
+  .audio-time-disp{font-size:.62rem;color:#475569;font-variant-numeric:tabular-nums;min-width:100px;text-align:right}
+  .play-btn{background:#16a34a;border:none;color:#fff;padding:7px 16px;border-radius:8px;
+             cursor:pointer;font-family:inherit;font-size:.65rem;white-space:nowrap;transition:background .15s}
+  .play-btn:hover{background:#15803d}
+
+  .swimlane-wrap{position:relative}
+  .lane-row{display:flex;align-items:center;margin-bottom:7px}
+  .lane-label{width:120px;font-size:.6rem;text-align:right;padding-right:12px;flex-shrink:0;user-select:none;position:relative}
+  .lane-track{flex:1;height:26px;background:#111827;border-radius:4px;position:relative;overflow:hidden;cursor:crosshair}
+  .seg-block{position:absolute;top:3px;height:20px;border-radius:3px;cursor:pointer;transition:opacity .12s,transform .1s}
+  .seg-block:hover{opacity:.8;transform:scaleY(1.15)}
+  .seg-block.selected{outline:2px solid #fff;z-index:10}
+
+  .lane-label-btn{display:inline-flex;align-items:center;gap:4px;cursor:pointer;
+    padding:2px 6px;border-radius:5px;border:1px solid transparent;transition:border-color .15s,background .15s}
+  .lane-label-btn:hover{border-color:#334155;background:#111827}
+  .lane-label-btn .edit-icon{font-size:.55rem;opacity:.4}
+  .lane-label-btn.tagged .edit-icon{opacity:.8;color:#34d399}
+
+  .roster-dropdown{position:absolute;right:0;top:calc(100% + 4px);background:#0f1520;
+    border:1px solid #1e293b;border-radius:10px;min-width:180px;z-index:200;
+    box-shadow:0 8px 32px #00000088;padding:6px 0;display:none}
+  .roster-dropdown.open{display:block}
+  .roster-search{width:calc(100% - 16px);margin:6px 8px 4px;background:#111827;
+    border:1px solid #1e293b;color:#e2e8f0;font-family:inherit;font-size:.62rem;
+    padding:5px 9px;border-radius:6px;outline:none}
+  .roster-search:focus{border-color:#3b82f6}
+  .roster-item{padding:6px 14px;font-size:.65rem;cursor:pointer;white-space:nowrap;color:#94a3b8;transition:background .1s}
+  .roster-item:hover{background:#1e293b;color:#e2e8f0}
+  .roster-item.selected-name{color:#34d399}
+  .roster-divider{height:1px;background:#1e293b;margin:4px 0}
+  .roster-clear{padding:5px 14px;font-size:.6rem;cursor:pointer;color:#475569;transition:background .1s}
+  .roster-clear:hover{background:#1e293b;color:#ef4444}
+
+  #save-bar{display:none;position:sticky;top:8px;z-index:300;
+    background:linear-gradient(90deg,#0f2d1a,#0c1f2e);border:1px solid #16a34a44;
+    border-radius:10px;padding:10px 18px;margin-bottom:14px;align-items:center;gap:14px;flex-wrap:wrap}
+  #save-bar.visible{display:flex}
+  #save-bar-text{font-size:.65rem;color:#34d399;flex:1}
+  .save-btn{background:#16a34a;border:none;color:#fff;padding:7px 20px;border-radius:8px;
+    cursor:pointer;font-family:inherit;font-size:.65rem;transition:background .15s}
+  .save-btn:hover{background:#15803d}
+  .discard-btn{background:transparent;border:1px solid #334155;color:#64748b;padding:7px 14px;
+    border-radius:8px;cursor:pointer;font-family:inherit;font-size:.65rem;transition:all .15s}
+  .discard-btn:hover{border-color:#ef4444;color:#ef4444}
+
+  #toast{position:fixed;bottom:24px;right:28px;z-index:999;background:#1e293b;
+    border:1px solid #334155;border-radius:10px;padding:10px 18px;font-size:.68rem;color:#e2e8f0;
+    transform:translateY(20px);opacity:0;transition:all .25s;pointer-events:none}
+  #toast.show{transform:translateY(0);opacity:1}
+  #toast.ok{border-color:#16a34a44;background:#0f2d1a}
+  #toast.err{border-color:#ef444444;background:#2d0f0f}
+
+  #playhead-overlay{position:absolute;top:0;left:120px;right:0;bottom:0;pointer-events:none;z-index:30;overflow:hidden}
+  #playhead-line{position:absolute;top:0;bottom:0;width:2px;left:0;
+                  background:linear-gradient(180deg,#ef4444,#f97316);box-shadow:0 0 8px #ef444488;display:none}
+  #playhead-label{position:absolute;top:2px;left:3px;background:#ef4444;color:#fff;
+    font-size:.52rem;padding:1px 4px;border-radius:3px;white-space:nowrap}
+  #cursor-overlay{position:absolute;top:0;left:120px;right:0;bottom:0;pointer-events:none;z-index:25;overflow:hidden}
+  #cursor-line{position:absolute;top:0;bottom:0;width:1px;background:#ffffff22;display:none}
+  #cursor-time{position:absolute;top:2px;left:3px;background:#1e293b;border-radius:3px;
+    padding:1px 4px;font-size:.52rem;color:#94a3b8;white-space:nowrap}
+
+  #detail-box{display:none;border-radius:10px;padding:12px 16px;margin-bottom:14px;border:1px solid}
+  .utt-row{display:flex;gap:10px;padding:8px 14px;border-bottom:1px solid #111827;cursor:pointer;transition:background .1s}
+  .utt-row:hover{background:#111827}
+  .utt-row.active{background:#1e293b}
+  .utt-row.now-playing{background:#1e1b4b;border-left:3px solid #ef4444}
+  .utt-time{font-size:.58rem;color:#334155;min-width:38px;padding-top:2px;flex-shrink:0}
+  .utt-spk{font-size:.6rem;min-width:80px;padding-top:2px;flex-shrink:0}
+  .utt-text{font-size:.73rem;color:#94a3b8;line-height:1.55}
+
+  .spk-chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{padding:4px 13px;border-radius:20px;border:1px solid #1e293b;background:#0f0f17;
+         font-size:.62rem;font-family:inherit;cursor:pointer;transition:all .15s;color:#64748b}
+  .chip.active{border-color:var(--chip-color);background:color-mix(in srgb,var(--chip-color) 12%,transparent);color:var(--chip-light)}
+
+  .chart-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px}
+  .chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+  @media(max-width:900px){.chart-grid-3{grid-template-columns:1fr}.chart-grid-2{grid-template-columns:1fr}}
+  .bar-row{margin-bottom:12px}
+  .bar-label{display:flex;justify-content:space-between;margin-bottom:4px;font-size:.63rem}
+  .bar-track{height:9px;background:#111827;border-radius:5px;overflow:hidden}
+  .bar-fill{height:100%;border-radius:5px;transition:width .8s cubic-bezier(.16,1,.3,1)}
+  #donut-svg{overflow:visible}
+  .plotly-chart{width:100%;height:340px}
+
+  .transcript-spk-bar{display:flex;gap:7px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid #111827}
+  .transcript-spk-btn{padding:4px 12px;border-radius:16px;border:1px solid #1e293b;
+    background:#0f0f17;font-size:.62rem;font-family:inherit;cursor:pointer;transition:all .15s;color:#64748b}
+  .transcript-spk-btn.active{border-color:var(--spk-color);
+    background:color-mix(in srgb,var(--spk-color) 15%,transparent);color:var(--spk-light)}
+  #transcript-body{font-size:.78rem;line-height:1.75;color:#cbd5e1;max-height:72vh;overflow-y:auto}
+  .turn-block{display:flex;gap:0;padding:10px 16px;border-bottom:1px solid #111827;cursor:pointer;
+    transition:background .1s;align-items:flex-start}
+  .turn-block:hover{background:#111827}
+  .turn-block.filtered-hidden{display:none}
+  .turn-meta{display:flex;flex-direction:column;min-width:160px;flex-shrink:0;padding-right:16px;gap:3px}
+  .turn-spk-name{font-size:.65rem;font-weight:600}
+  .turn-times{font-size:.58rem;color:#475569;white-space:nowrap}
+  .turn-dur{font-size:.56rem;color:#334155}
+  .turn-text{font-size:.75rem;color:#94a3b8;line-height:1.65;flex:1}
+
+  .doc-tab-bar{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;border-bottom:1px solid #111827;flex-wrap:wrap;gap:8px}
+  .doc-view-toggle{display:flex;gap:3px;background:#111827;border-radius:6px;padding:2px}
+  .doc-view-btn{padding:4px 12px;border-radius:5px;border:none;font-family:inherit;
+    font-size:.6rem;cursor:pointer;background:transparent;color:#475569;transition:all .15s}
+  .doc-view-btn.active{background:#1e293b;color:#e2e8f0}
+  .doc-action-bar{display:flex;gap:8px;align-items:center}
+  .doc-save-btn{background:#2E75B6;border:none;color:#fff;padding:5px 14px;border-radius:7px;
+    cursor:pointer;font-family:inherit;font-size:.62rem;transition:background .15s}
+  .doc-save-btn:hover{background:#1B3A6B}
+  .doc-editor{width:100%;min-height:68vh;background:#0a0a10;color:#cbd5e1;border:1px solid #1e293b;
+    border-radius:0 0 10px 10px;padding:16px;font-family:'DM Mono',monospace;font-size:.75rem;
+    line-height:1.75;resize:vertical;outline:none}
+  .doc-editor:focus{border-color:#2E75B6}
+  .doc-viewer{min-height:68vh;background:#0a0a10;border:1px solid #1e293b;border-radius:0 0 10px 10px;
+    padding:20px 28px;max-height:75vh;overflow-y:auto;color:#cbd5e1;line-height:1.8;font-size:.78rem}
+  .doc-viewer h1{font-size:1.2rem;color:#60a5fa;margin:20px 0 8px;border-bottom:1px solid #1e293b;padding-bottom:6px}
+  .doc-viewer h2{font-size:1rem;color:#93c5fd;margin:16px 0 6px}
+  .doc-viewer h3{font-size:.88rem;color:#bfdbfe;margin:12px 0 4px}
+  .doc-viewer p{margin-bottom:10px}
+  .doc-viewer ul,.doc-viewer ol{padding-left:20px;margin-bottom:10px}
+  .doc-viewer li{margin-bottom:4px}
+  .doc-viewer table{width:100%;border-collapse:collapse;margin-bottom:14px;font-size:.72rem}
+  .doc-viewer th{background:#1B3A6B;color:#e2e8f0;padding:6px 10px;text-align:left}
+  .doc-viewer td{padding:6px 10px;border-bottom:1px solid #1e293b}
+  .doc-viewer tr:hover td{background:#0f172a}
+  .doc-viewer blockquote{border-left:3px solid #2E75B6;padding:8px 14px;background:#0f1a2e;
+    margin:10px 0;border-radius:0 6px 6px 0;color:#94a3b8;font-style:italic}
+  .doc-viewer code{background:#1e293b;padding:1px 5px;border-radius:3px;font-size:.72rem;color:#93c5fd}
+  .doc-viewer hr{border:none;border-top:1px solid #1e293b;margin:16px 0}
+  .doc-viewer strong{color:#e2e8f0}
+
+  .out-tabs{display:flex;gap:3px;background:#111827;border-radius:7px;padding:3px;margin-bottom:16px;width:fit-content}
+  .out-tab{padding:5px 14px;border-radius:5px;border:none;font-family:inherit;font-size:.6rem;
+            cursor:pointer;background:transparent;color:#475569;transition:all .15s;letter-spacing:.04em}
+  .out-tab.active{background:#1e293b;color:#e2e8f0}
+  #json-content{font-size:.66rem;color:#94a3b8;overflow:auto;max-height:70vh;background:#0a0a10;
+    border-radius:8px;padding:14px;white-space:pre;border:1px solid #1e293b;
+    font-family:'DM Mono',monospace;line-height:1.55}
+
+  .export-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+  @media(max-width:700px){.export-grid{grid-template-columns:1fr}}
+  .export-card{background:#0c0c14;border:1px solid #1e293b;border-radius:12px;padding:18px 20px}
+  .export-card-title{font-size:.75rem;font-weight:600;color:#93c5fd;margin-bottom:4px}
+  .export-card-sub{font-size:.62rem;color:#475569;margin-bottom:14px}
+  .export-format-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .export-fmt-btn{padding:5px 14px;border-radius:7px;border:1px solid #1e293b;background:#111827;
+    font-family:inherit;font-size:.62rem;cursor:pointer;color:#64748b;transition:all .15s}
+  .export-fmt-btn.selected{border-color:#2E75B6;background:#1B3A6B22;color:#93c5fd}
+  .export-trigger-btn{background:linear-gradient(90deg,#1B3A6B,#2E75B6);border:none;color:#fff;
+    padding:8px 20px;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.65rem;
+    transition:opacity .15s;width:100%}
+  .export-trigger-btn:hover{opacity:.85}
+  .export-trigger-btn:disabled{opacity:.4;cursor:not-allowed}
+  .export-status{font-size:.62rem;color:#475569;margin-top:8px;min-height:18px}
+
+  .tooltip{position:fixed;background:#1e293b;border-radius:8px;padding:8px 12px;font-size:.62rem;
+    pointer-events:none;display:none;z-index:400;border:1px solid #334155;line-height:1.65}
+
+  .ps-toggle-track{position:absolute;top:0;left:0;right:0;bottom:0;background:#1e293b;border-radius:20px;transition:.25s;border:1px solid #334155}
+  .ps-toggle-track:before{content:"";position:absolute;width:14px;height:14px;left:2px;bottom:2px;background:#64748b;border-radius:50%;transition:.25s}
+  input:checked+.ps-toggle-track{background:#15803d;border-color:#16a34a}
+  input:checked+.ps-toggle-track:before{transform:translateX(16px);background:#fff}
+
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<div id="save-bar">
+  <div id="save-bar-text">🏷 Unsaved name changes</div>
+  <button class="discard-btn" onclick="discardNames()">Discard</button>
+  <button class="save-btn" onclick="saveNames()">💾 Save Names</button>
+</div>
+
+<div style="margin-bottom:20px">
+  <div style="font-size:.55rem;letter-spacing:.2em;color:#334155;margin-bottom:4px;font-family:'Unbounded',sans-serif">DN-STUDIO</div>
+  <h1>Project Console</h1>
+  <div class="subtitle" id="meta-line">loading…</div>
+</div>
+
+<!-- ── REDESIGNED TOP NAV ── -->
+<div class="top-nav" style="flex-direction:column;align-items:stretch;gap:0;margin-bottom:0">
+
+  <!-- Row 1: Project/Run selector bar -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+
+    <!-- Active project/run pill -->
+    <div style="display:flex;align-items:center;gap:0;background:#0f0f1a;border:1px solid #1e293b;border-radius:10px;overflow:hidden;flex:1;min-width:260px;max-width:520px">
+      <div style="padding:7px 12px;font-size:.52rem;letter-spacing:.12em;color:#334155;white-space:nowrap;border-right:1px solid #1e293b;background:#0a0a12">PROJECT / RUN</div>
+      <select id="run-select" style="flex:1;background:transparent;border:none;color:#e2e8f0;font-family:'DM Mono',monospace;font-size:.68rem;padding:7px 10px;cursor:pointer;outline:none"></select>
+      <button type="button" id="load-config-btn" title="Load config for selected run"
+        style="padding:7px 14px;background:#1e293b;border:none;border-left:1px solid #334155;color:#94a3b8;font-family:'DM Mono',monospace;font-size:.6rem;cursor:pointer;white-space:nowrap;transition:all .15s;letter-spacing:.04em"
+        onmouseover="this.style.color='#e2e8f0'" onmouseout="this.style.color='#94a3b8'">
+        📂 Load
+      </button>
+    </div>
+
+    <!-- Spacer -->
+    <div style="flex:1"></div>
+
+    <!-- Main tabs (right-aligned) -->
+    <div class="tabs" id="main-tabs" style="flex-shrink:0">
+      <button class="tab active" data-tab="config"     onclick="switchTab('config')">⚙ Config</button>
+      <button class="tab"        data-tab="timeline"   onclick="switchTab('timeline')">⚡ Diarization</button>
+      <button class="tab"        data-tab="clusters"   onclick="switchTab('clusters')">◈ Clusters</button>
+      <button class="tab"        data-tab="transcript" onclick="switchTab('transcript')">≡ Transcript</button>
+      <button class="tab"        data-tab="mom"        onclick="switchTab('mom')">📝 MoM</button>
+      <button class="tab"        data-tab="brd"        onclick="switchTab('brd')">📋 BRD</button>
+      <button class="tab"        data-tab="export"     onclick="switchTab('export')">⬇ Export</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="spk-chips" id="spk-chips"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<div id="tab-config">
+  <div id="cfg-grid" style="display:grid;grid-template-columns:1fr 360px;gap:16px;align-items:start">
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+
+      <div class="card" style="padding:22px 24px">
+        <div class="section-label" style="margin-bottom:16px">Project Identity</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+          <div>
+            <label style="display:block;font-size:.58rem;letter-spacing:.12em;color:#475569;margin-bottom:6px;text-transform:uppercase">Project Name</label>
+            <input id="cfg-project-name" type="text"
+              style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:.75rem;color:#e2e8f0;outline:none;transition:border-color .15s"
+              placeholder="e.g. LMS-4"
+              onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+          </div>
+          <div>
+            <label style="display:block;font-size:.58rem;letter-spacing:.12em;color:#475569;margin-bottom:6px;text-transform:uppercase">Experiment Name</label>
+            <input id="cfg-experiment-name" type="text"
+              style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:.75rem;color:#e2e8f0;outline:none;transition:border-color .15s"
+              placeholder="e.g. baseline-run-1"
+              onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:.58rem;letter-spacing:.12em;color:#475569;margin-bottom:6px;text-transform:uppercase">Context / Description</label>
+          <textarea id="cfg-context" rows="5"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:.72rem;color:#e2e8f0;resize:vertical;outline:none;line-height:1.65;transition:border-color .15s"
+            placeholder="Describe the meeting, agenda, client, or any notes that help interpret the transcript…"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'"></textarea>
+          <div style="font-size:.57rem;color:#334155;margin-top:4px">Used by the LLM when generating MoM and BRD</div>
+        </div>
+      </div>
+
+      <div class="card" style="padding:22px 24px">
+        <div class="section-label" style="margin-bottom:16px">Audio &amp; Speakers</div>
+        <div style="margin-bottom:14px">
+          <label style="display:block;font-size:.58rem;letter-spacing:.12em;color:#475569;margin-bottom:6px;text-transform:uppercase">Audio File</label>
+          <div style="display:flex;align-items:center;gap:10px;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:8px 12px">
+            <label for="cfg-audio-file"
+              style="padding:5px 12px;background:#1e293b;border-radius:6px;font-size:.6rem;color:#94a3b8;cursor:pointer;white-space:nowrap;transition:background .15s;flex-shrink:0"
+              onmouseover="this.style.background='#334155'" onmouseout="this.style.background='#1e293b'">
+              Choose file
+            </label>
+            <input id="cfg-audio-file" type="file" accept="audio/*,video/*" style="display:none" />
+            <div id="cfg-audio-label" style="font-size:.65rem;color:#475569;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              Current: uses default audio from cfg/config.yaml
+            </div>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:.58rem;letter-spacing:.12em;color:#475569;margin-bottom:6px;text-transform:uppercase">Number of Speakers</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <input id="cfg-num-speakers" type="number" min="0"
+              style="width:90px;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:.75rem;color:#e2e8f0;outline:none;transition:border-color .15s"
+              placeholder="auto"
+              onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+            <div style="font-size:.62rem;color:#334155;line-height:1.5">Leave blank / 0 to auto-detect</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button id="cfg-save-btn"
+          style="display:flex;align-items:center;gap:6px;padding:9px 22px;background:#1d4ed8;border:none;color:#fff;border-radius:9px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.05em;transition:background .15s"
+          onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#1d4ed8'">
+          💾 Save Config
+        </button>
+        <div id="cfg-save-status" style="font-size:.63rem;color:#475569;align-self:center;flex:1"></div>
+      </div>
+
+    </div>
+
+    <div style="position:sticky;top:16px">
+      <div class="card" style="padding:18px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="section-label" style="margin-bottom:0">Config YAML</div>
+          <button onclick="document.getElementById('load-config-btn').click()"
+            style="padding:4px 10px;background:#111827;border:1px solid #1e293b;border-radius:6px;color:#475569;font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;transition:all .15s"
+            onmouseover="this.style.color='#e2e8f0';this.style.borderColor='#334155'"
+            onmouseout="this.style.color='#475569';this.style.borderColor='#1e293b'">
+            ↻ Reload
+          </button>
+        </div>
+        <div style="font-size:.57rem;color:#334155;margin-bottom:8px">Raw YAML for the selected project / run</div>
+        <pre id="cfg-yaml-preview"
+          style="margin:0;padding:12px;background:#060612;border:1px solid #1e293b;border-radius:8px;font-family:'DM Mono',monospace;font-size:.63rem;color:#64748b;overflow:auto;max-height:calc(100vh - 300px);min-height:200px;white-space:pre-wrap;word-break:break-all;line-height:1.6">Click "Load" on the run selector to show YAML.</pre>
+      </div>
+    </div>
+
+  </div>
+  <style>
+    @media(max-width:860px){#cfg-grid{grid-template-columns:1fr!important}#cfg-grid>div:last-child{position:static!important}}
+  </style>
+</div>
+<div id="tab-timeline" style="display:none">
+
+  <!-- ── 1. Active Experiment Info ── -->
+  <div class="card" id="diar-info-panel" style="padding:16px 20px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="section-label" style="margin-bottom:0">Active Experiment</div>
+      <button onclick="loadDiarInfo()"
+        style="padding:4px 10px;background:#111827;border:1px solid #1e293b;border-radius:6px;color:#475569;font-family:'DM Mono',monospace;font-size:.58rem;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.color='#e2e8f0';this.style.borderColor='#334155'"
+        onmouseout="this.style.color='#475569';this.style.borderColor='#1e293b'">↻ Refresh</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+      <div>
+        <div style="font-size:.52rem;letter-spacing:.12em;color:#334155;text-transform:uppercase;margin-bottom:4px">Project</div>
+        <div id="diar-project-name" style="font-size:.72rem;color:#93c5fd;font-weight:600">—</div>
+      </div>
+      <div>
+        <div style="font-size:.52rem;letter-spacing:.12em;color:#334155;text-transform:uppercase;margin-bottom:4px">Experiment</div>
+        <div id="diar-experiment-name" style="font-size:.72rem;color:#6ee7b7;font-weight:600">—</div>
+      </div>
+      <div>
+        <div style="font-size:.52rem;letter-spacing:.12em;color:#334155;text-transform:uppercase;margin-bottom:4px">Audio</div>
+        <div id="diar-audio-path" style="font-size:.62rem;color:#94a3b8;word-break:break-all">—</div>
+      </div>
+    </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:.52rem;letter-spacing:.12em;color:#334155;text-transform:uppercase;margin-bottom:4px">Experiment Folder</div>
+      <div id="diar-exp-path"
+        style="font-size:.62rem;color:#fcd34d;font-family:'DM Mono',monospace;background:#111827;padding:6px 10px;border-radius:6px;border:1px solid #1e293b;word-break:break-all">—</div>
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="font-size:.52rem;letter-spacing:.12em;color:#334155;text-transform:uppercase">Config YAML</div>
+        <button id="diar-yaml-toggle" onclick="toggleDiarYaml()"
+          style="padding:2px 8px;background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-family:'DM Mono',monospace;font-size:.52rem;cursor:pointer;transition:all .15s"
+          onmouseover="this.style.borderColor='#334155'" onmouseout="this.style.borderColor='#1e293b'">▸ Show</button>
+      </div>
+      <pre id="diar-yaml-preview"
+        style="display:none;margin:0;padding:10px;background:#060612;border:1px solid #1e293b;border-radius:6px;font-family:'DM Mono',monospace;font-size:.58rem;color:#64748b;overflow:auto;max-height:200px;white-space:pre-wrap;word-break:break-all;line-height:1.5">—</pre>
+    </div>
+  </div>
+
+  <!-- ── 1b. Pipeline Settings (collapsible) ── -->
+  <div class="card" id="pipeline-settings-panel" style="padding:16px 20px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0">
+      <div class="section-label" style="margin-bottom:0">Pipeline Settings</div>
+      <button id="pipe-settings-toggle" onclick="togglePipelineSettings()"
+        style="padding:3px 10px;background:transparent;border:1px solid #1e293b;border-radius:5px;color:#475569;font-family:'DM Mono',monospace;font-size:.52rem;cursor:pointer;transition:all .15s"
+        onmouseover="this.style.borderColor='#334155'" onmouseout="this.style.borderColor='#1e293b'">▸ Show</button>
+    </div>
+    <div id="pipe-settings-body" style="display:none;margin-top:14px">
+
+      <div style="font-size:.56rem;letter-spacing:.12em;color:#3b82f6;text-transform:uppercase;margin-bottom:10px;font-weight:600">ASR Settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:18px">
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Whisper Model</label>
+          <select id="ps-whisper-model"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none">
+            <option value="tiny.en">tiny.en</option>
+            <option value="base.en">base.en</option>
+            <option value="small.en">small.en</option>
+            <option value="medium.en">medium.en</option>
+            <option value="large-v2">large-v2</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Beam Size</label>
+          <input id="ps-beam-size" type="number" min="1" max="10" step="1"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">VAD Filter</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer">
+              <input id="ps-vad-filter" type="checkbox" style="opacity:0;width:0;height:0" />
+              <span class="ps-toggle-track"></span>
+            </label>
+            <span id="ps-vad-filter-label" style="font-size:.6rem;color:#64748b">off</span>
+          </div>
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">VAD Silence (ms)</label>
+          <input id="ps-vad-silence" type="number" min="100" max="2000" step="50"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">No-Speech Thresh</label>
+          <input id="ps-no-speech-thresh" type="number" min="0" max="1" step="0.05"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div></div>
+        <div style="grid-column:1/-1;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer">
+              <input id="ps-remove-fillers" type="checkbox" style="opacity:0;width:0;height:0" />
+              <span class="ps-toggle-track"></span>
+            </label>
+            <span style="font-size:.58rem;color:#94a3b8">Remove Fillers</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer">
+              <input id="ps-remove-stutters" type="checkbox" style="opacity:0;width:0;height:0" />
+              <span class="ps-toggle-track"></span>
+            </label>
+            <span style="font-size:.58rem;color:#94a3b8">Remove Stutters</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer">
+              <input id="ps-remove-repeats" type="checkbox" style="opacity:0;width:0;height:0" />
+              <span class="ps-toggle-track"></span>
+            </label>
+            <span style="font-size:.58rem;color:#94a3b8">Remove Repeats</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:.56rem;letter-spacing:.12em;color:#10b981;text-transform:uppercase;margin-bottom:10px;font-weight:600">Diarization Settings</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-bottom:14px">
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Max Speakers</label>
+          <input id="ps-max-speakers" type="number" min="2" max="20" step="1"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Smooth Window</label>
+          <input id="ps-smooth-window" type="number" min="1" max="10" step="1"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Min Segment Dur (s)</label>
+          <input id="ps-min-seg-dur" type="number" min="0.1" max="2.0" step="0.1"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">PCA Variance</label>
+          <input id="ps-pca-variance" type="number" min="0.80" max="1.00" step="0.01"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none;box-sizing:border-box"
+            onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'" />
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Linkage</label>
+          <select id="ps-linkage"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none">
+            <option value="average">average</option>
+            <option value="complete">complete</option>
+            <option value="single">single</option>
+            <option value="ward">ward</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:.52rem;letter-spacing:.1em;color:#475569;margin-bottom:4px;text-transform:uppercase">Metric</label>
+          <select id="ps-metric"
+            style="width:100%;background:#060612;border:1px solid #1e293b;border-radius:7px;padding:7px 10px;font-family:'DM Mono',monospace;font-size:.68rem;color:#e2e8f0;outline:none">
+            <option value="cosine">cosine</option>
+            <option value="euclidean">euclidean</option>
+          </select>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px">
+        <button id="ps-apply-btn" onclick="savePipelineSettings()"
+          style="padding:8px 20px;background:#1d4ed8;border:none;color:#fff;border-radius:8px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.05em;transition:background .15s"
+          onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#1d4ed8'">
+          💾 Apply Settings
+        </button>
+        <div id="ps-status" style="font-size:.6rem;color:#475569"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. Audio Player ── -->
+  <div class="audio-player">
+    <div class="audio-info">
+      <div class="audio-name" id="audio-filename">No audio loaded</div>
+      <div class="audio-hint">Click a swimlane block or track to seek</div>
+    </div>
+    <button class="play-btn" id="play-pause-btn" onclick="togglePlay()">▶ Play</button>
+    <audio id="audio-el" controls></audio>
+    <div class="audio-time-disp" id="audio-time-disp">0:00 / 0:00</div>
+  </div>
+
+  <!-- ── 3. Run Diarization ── -->
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+    <button id="cfg-run-btn"
+      style="display:flex;align-items:center;gap:6px;padding:9px 22px;background:#15803d;border:none;color:#fff;border-radius:9px;cursor:pointer;font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.05em;transition:background .15s"
+      onmouseover="this.style.background='#16a34a'" onmouseout="this.style.background='#15803d'">
+      ⚡ Run Diarization
+    </button>
+    <div id="cfg-status" style="font-size:.63rem;color:#475569;flex:1"></div>
+  </div>
+  <div id="cfg-progress-wrap" style="display:none;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:.63rem;color:#94a3b8">
+      <span id="cfg-progress-label">Running diarization…</span>
+      <span id="cfg-progress-pct">0%</span>
+    </div>
+    <div style="height:8px;background:#111827;border-radius:10px;overflow:hidden;border:1px solid #1e293b">
+      <div id="cfg-progress-fill" style="height:100%;width:0%;border-radius:10px;transition:width .4s ease-out;background:linear-gradient(90deg,#059669,#10b981,#34d399);box-shadow:0 0 10px rgba(16,185,129,.35)"></div>
+    </div>
+  </div>
+  <div id="diar-artifacts-msg" style="display:none;margin-bottom:14px;padding:12px 16px;background:#0f2d1a;border:1px solid #16a34a44;border-radius:10px"></div>
+
+  <!-- ── 4. Speaker Swimlanes ── -->
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="section-label" style="margin-bottom:0">Speaker Swimlanes</div>
+      <div style="font-size:.55rem;color:#334155">💡 Click a speaker name to assign from roster</div>
+    </div>
+    <div style="display:flex;margin-bottom:6px">
+      <div style="width:120px;flex-shrink:0"></div>
+      <div style="flex:1;position:relative;height:16px" id="ruler"></div>
+    </div>
+    <div class="swimlane-wrap" id="swimlane-wrap">
+      <div id="lanes-container"></div>
+      <div id="playhead-overlay">
+        <div id="playhead-line"><div id="playhead-label"></div></div>
+      </div>
+      <div id="cursor-overlay">
+        <div id="cursor-line"><div id="cursor-time"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="detail-box"></div>
+
+  <!-- ── 5. Bottom: Utterances + t-SNE 2D  (1 row × 2 cols) ── -->
+  <div id="diar-bottom-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:10px 16px;border-bottom:1px solid #111827;font-size:.55rem;letter-spacing:.14em;color:#334155" id="log-header">UTTERANCES</div>
+      <div style="max-height:420px;overflow-y:auto" id="utt-log"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">t-SNE 2D — d-vector Embeddings</div>
+      </div>
+      <div id="diar-tsne-plotly" class="plotly-chart"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="diar-tsne-legend"></div>
+    </div>
+  </div>
+  <style>
+    @media(max-width:900px){#diar-bottom-grid{grid-template-columns:1fr!important}}
+  </style>
+</div>
+
+<div id="tab-clusters" style="display:none">
+  <div class="chart-grid-2">
+    <div class="card">
+      <div class="section-label">Word Count</div>
+      <div id="chart-words"></div>
+    </div>
+    <div class="card">
+      <div class="section-label">Turn Count</div>
+      <div id="chart-turns"></div>
+    </div>
+  </div>
+  <div class="chart-grid-3">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">PCA 2D — d-vector Embeddings</div>
+      </div>
+      <div id="pca-plotly" class="plotly-chart"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="pca-legend"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">t-SNE 2D — d-vector Embeddings</div>
+      </div>
+      <div id="tsne-plotly" class="plotly-chart"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="tsne-legend"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="section-label" style="margin-bottom:0">t-SNE 3D — d-vector Embeddings</div>
+      </div>
+      <div id="tsne3d-plotly" class="plotly-chart"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap" id="tsne3d-legend"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-transcript" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="transcript-spk-bar" id="transcript-spk-bar"></div>
+    <div style="padding:8px 16px;border-bottom:1px solid #111827;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:.55rem;letter-spacing:.14em;color:#334155">TRANSCRIPT</div>
+      <div style="font-size:.6rem;color:#475569" id="transcript-meta"></div>
+    </div>
+    <div id="transcript-body" style="padding:0"></div>
+  </div>
+</div>
+
+<div id="tab-mom" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="doc-tab-bar">
+      <div style="font-size:.55rem;letter-spacing:.14em;color:#334155">MINUTES OF MEETING</div>
+      <div class="doc-action-bar">
+        <div class="doc-view-toggle">
+          <button class="doc-view-btn active" id="mom-edit-btn" onclick="setMomView('edit')">Edit</button>
+          <button class="doc-view-btn" id="mom-view-btn" onclick="setMomView('view')">Preview</button>
+        </div>
+        <button class="doc-save-btn" onclick="saveMomMd()">💾 Save MoM.md</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #1e293b;background:#0a0a12">
+      <textarea id="mom-context-input" rows="2"
+        placeholder="Optional context — paste notes, agenda items, or additional instructions to append to the prompt…"
+        style="flex:1;background:#111827;border:1px solid #1e293b;color:#cbd5e1;font-family:'DM Mono',monospace;
+               font-size:.62rem;padding:7px 10px;border-radius:8px;resize:vertical;outline:none;line-height:1.5;
+               min-height:46px;max-height:120px;transition:border-color .15s"
+        onfocus="this.style.borderColor='#3b82f6'" onblur="this.style.borderColor='#1e293b'"></textarea>
+      <button onclick="generateMom()"
+        style="background:#2563eb;border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;
+               font-family:'DM Mono',monospace;font-size:.62rem;white-space:nowrap;letter-spacing:.04em;
+               transition:background .15s;flex-shrink:0;height:46px"
+        onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'"
+        id="mom-generate-btn">⚡ Generate Minutes</button>
+    </div>
+    <div id="mom-gen-status" style="display:none;padding:8px 14px;font-size:.6rem;color:#60a5fa;border-bottom:1px solid #1e293b;background:#0a0a12">
+      <span id="mom-gen-status-text">Generating…</span>
+    </div>
+    <textarea class="doc-editor" id="mom-editor" spellcheck="false" placeholder="MoM will appear here after generation…"></textarea>
+    <div class="doc-viewer" id="mom-viewer" style="display:none"></div>
+  </div>
+</div>
+
+<div id="tab-brd" style="display:none">
+  <div class="card" style="padding:0;overflow:hidden">
+    <div class="doc-tab-bar">
+      <div style="font-size:.55rem;letter-spacing:.14em;color:#334155">BUSINESS REQUIREMENTS DOCUMENT</div>
+      <div class="doc-action-bar">
+        <div class="doc-view-toggle">
+          <button class="doc-view-btn active" id="brd-edit-btn" onclick="setBrdView('edit')">Edit</button>
+          <button class="doc-view-btn" id="brd-view-btn" onclick="setBrdView('view')">Preview</button>
+        </div>
+        <button class="doc-save-btn" onclick="saveBrdMd()">💾 Save BRD.md</button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-bottom:1px solid #1e293b;background:#0a0a12">
+      <textarea id="brd-context-input" rows="2"
+        placeholder="Optional context — paste additional scope, constraints, or stakeholder notes to append to the prompt…"
+        style="flex:1;background:#111827;border:1px solid #1e293b;color:#cbd5e1;font-family:'DM Mono',monospace;
+               font-size:.62rem;padding:7px 10px;border-radius:8px;resize:vertical;outline:none;line-height:1.5;
+               min-height:46px;max-height:120px;transition:border-color .15s"
+        onfocus="this.style.borderColor='#7c3aed'" onblur="this.style.borderColor='#1e293b'"></textarea>
+      <button onclick="generateBrd()"
+        style="background:#7c3aed;border:none;color:#fff;padding:8px 14px;border-radius:8px;cursor:pointer;
+               font-family:'DM Mono',monospace;font-size:.62rem;white-space:nowrap;letter-spacing:.04em;
+               transition:background .15s;flex-shrink:0;height:46px"
+        onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'"
+        id="brd-generate-btn">⚡ Generate BRD</button>
+    </div>
+    <div id="brd-gen-status" style="display:none;padding:8px 14px;font-size:.6rem;color:#a78bfa;border-bottom:1px solid #1e293b;background:#0a0a12">
+      <span id="brd-gen-status-text">Generating…</span>
+    </div>
+    <textarea class="doc-editor" id="brd-editor" spellcheck="false" placeholder="BRD will appear here after generation…"></textarea>
+    <div class="doc-viewer" id="brd-viewer" style="display:none"></div>
+  </div>
+</div>
+
+<div id="tab-export" style="display:none">
+  <div style="font-size:.62rem;color:#475569;margin-bottom:16px">
+    Select what to export and in which format. Export calls the backend Flask API.
+  </div>
+  <div class="export-grid">
+    <div class="export-card">
+      <div class="export-card-title">📝 Minutes of Meeting</div>
+      <div class="export-card-sub">Export MoM as a professional document</div>
+      <div style="font-size:.6rem;color:#334155;margin-bottom:6px">FORMAT</div>
+      <div class="export-format-row" id="mom-export-formats">
+        <button class="export-fmt-btn selected" data-fmt="pdf" onclick="toggleExportFmt(this,'mom')">PDF</button>
+        <button class="export-fmt-btn" data-fmt="docx" onclick="toggleExportFmt(this,'mom')">Word (.docx)</button>
+      </div>
+      <button class="export-trigger-btn" onclick="triggerExport('mom')">⬇ Export MoM</button>
+      <div class="export-status" id="mom-export-status"></div>
+    </div>
+
+    <div class="export-card">
+      <div class="export-card-title">📋 Business Requirements Document</div>
+      <div class="export-card-sub">Export BRD as a professional document</div>
+      <div style="font-size:.6rem;color:#334155;margin-bottom:6px">FORMAT</div>
+      <div class="export-format-row" id="brd-export-formats">
+        <button class="export-fmt-btn selected" data-fmt="pdf" onclick="toggleExportFmt(this,'brd')">PDF</button>
+        <button class="export-fmt-btn" data-fmt="docx" onclick="toggleExportFmt(this,'brd')">Word (.docx)</button>
+      </div>
+      <button class="export-trigger-btn" onclick="triggerExport('brd')">⬇ Export BRD</button>
+      <div class="export-status" id="brd-export-status"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-label">Export Log</div>
+    <div id="export-log" style="font-size:.65rem;color:#475569;line-height:1.8;min-height:40px">No exports yet.</div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('error', function(e) {
+  console.error('Uncaught error:', e.message, e.filename, e.lineno);
+  var t = document.getElementById('toast');
+  if (t) { t.textContent = 'JS Error: ' + e.message; t.className = 'show err'; }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('Unhandled promise rejection:', e.reason);
+  var t = document.getElementById('toast');
+  if (t) { t.textContent = 'Async Error: ' + (e.reason && e.reason.message || e.reason); t.className = 'show err'; }
+});
+
+const RUNS        = __RUNS_JSON__;
+const DEFAULT_RUN = __DEFAULT_RUN__;
+const ROSTER      = __ROSTER_JSON__;
+const CLUSTERS    = __CLUSTERS_JSON__;
+
+const PALETTE = [
+  {bg:'#3b82f6',light:'#93c5fd'},{bg:'#10b981',light:'#6ee7b7'},
+  {bg:'#f59e0b',light:'#fcd34d'},{bg:'#ef4444',light:'#fca5a5'},
+  {bg:'#8b5cf6',light:'#c4b5fd'},{bg:'#ec4899',light:'#f9a8d4'},
+  {bg:'#14b8a6',light:'#5eead4'},{bg:'#f97316',light:'#fdba74'},
+];
+const pal = i => PALETTE[i % PALETTE.length];
+
+let SPEAKER_MAP = {}, PENDING_MAP = {};
+function displayName(id) { return PENDING_MAP[id] || SPEAKER_MAP[id] || id; }
+function hasPendingChanges() { return Object.keys(PENDING_MAP).length > 0; }
+
+let SEGMENTS=[], SPEAKERS=[], CMAP={}, STATS={}, TOTAL=1;
+let activeSpk=null, selectedSeg=null, audioReady=false, lastUttIdx=-1;
+let currentRunId='', _momMdContent='', _brdMdContent='';
+let _transcriptFilterSpk=null;
+
+const fmtSec = t=>{ const m=Math.floor(t/60),s=Math.floor(t%60); return `${m}:${s.toString().padStart(2,'0')}`; };
+const fmtDur = t=>{ const s=Math.round(t); return s<60?`${s}s`:`${Math.floor(s/60)}m${s%60}s`; };
+const b64dec  = b64=>{ try{ return atob(b64); }catch(e){ return ''; } };
+
+function toast(msg, type='ok', ms=2800) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className=`show ${type}`;
+  clearTimeout(el._t); el._t=setTimeout(()=>{ el.className=''; }, ms);
+}
+
+const runSel=document.getElementById('run-select');
+RUNS.forEach((r,i)=>{
+  const opt=document.createElement('option');
+  opt.value=i; opt.textContent=r.label;
+  if(i===DEFAULT_RUN) opt.selected=true;
+  runSel.appendChild(opt);
+});
+runSel.addEventListener('change',()=>loadRun(+runSel.value));
+
+async function loadConfigForSelectedRun() {
+  const runIdx = parseInt(runSel.value, 10);
+  if (isNaN(runIdx) || runIdx < 0 || runIdx >= RUNS.length) return;
+  const run = RUNS[runIdx];
+  const runId = run.id || 'current';
+  const btn = document.getElementById('load-config-btn');
+  const yamlEl = document.getElementById('cfg-yaml-preview');
+  btn.disabled = true;
+  yamlEl.textContent = 'Loading…';
+  try {
+    const resp = await fetch('/api/config?run_id=' + encodeURIComponent(runId));
+    const d = await resp.json();
+    if (!d.ok) { yamlEl.textContent = 'No config for this run.'; return; }
+    document.getElementById('cfg-project-name').value = d.project_name || '';
+    document.getElementById('cfg-experiment-name').value = d.experiment_name || '';
+    document.getElementById('cfg-context').value = d.context || '';
+    document.getElementById('cfg-num-speakers').value = d.num_speakers != null ? d.num_speakers : '';
+    const lbl = document.getElementById('cfg-audio-label');
+    lbl.textContent = d.audio_path ? 'Current audio: ' + d.audio_path : 'Current: uses default audio from cfg/config.yaml';
+    yamlEl.textContent = (d.yaml_raw && d.yaml_raw.trim()) ? d.yaml_raw : '(No YAML for this run)';
+    toast('Config loaded for ' + run.label, 'ok');
+  } catch (e) {
+    yamlEl.textContent = 'Failed to load config — check server.';
+    toast('Load config failed', 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+var loadBtn = document.getElementById('load-config-btn');
+if (loadBtn) loadBtn.addEventListener('click', loadConfigForSelectedRun);
+
+async function runDiarization() {
+  const wrap = document.getElementById('cfg-progress-wrap');
+  const fill = document.getElementById('cfg-progress-fill');
+  const pctEl = document.getElementById('cfg-progress-pct');
+  const labelEl = document.getElementById('cfg-progress-label');
+  const status = document.getElementById('cfg-status');
+  const runBtn = document.getElementById('cfg-run-btn');
+
+  if (wrap) { wrap.style.display = 'block'; }
+  if (fill) { fill.style.width = '0%'; }
+  if (pctEl) { pctEl.textContent = '0%'; }
+  if (labelEl) { labelEl.textContent = 'Running diarization…'; }
+  if (runBtn) { runBtn.disabled = true; }
+  if (status) { status.textContent = 'Running diarization pipeline…'; }
+
+  let pct = 0;
+  const progressTimer = setInterval(() => {
+    if (pct >= 90) return;
+    pct += Math.random() * 4 + 2;
+    pct = Math.min(90, Math.floor(pct));
+    if (fill) fill.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+  }, 1200);
+
+  try {
+    const resp = await fetch('/api/run', { method: 'POST' });
+    let d = {};
+    try { d = await resp.json(); } catch (_) { d = { ok: false, error: resp.statusText || 'Server error' }; }
+    clearInterval(progressTimer);
+    if (fill) fill.style.width = '100%';
+    if (pctEl) pctEl.textContent = '100%';
+
+    if (resp.ok && d.ok) {
+      if (labelEl) labelEl.textContent = 'Done — reloading…';
+      if (status) status.textContent = '✅ Diarization complete';
+      const artEl = document.getElementById('diar-artifacts-msg');
+      if (artEl) {
+        const exp = d.experiment || {};
+        const names = d.exported || [];
+        artEl.style.display = 'block';
+        artEl.innerHTML =
+          '<div style="font-size:.62rem;color:#34d399;margin-bottom:6px;font-weight:600">✅ Exported artifacts (' + names.length + ' files)</div>' +
+          (names.length ? '<div style="font-size:.62rem;color:#94a3b8;line-height:1.7">' + names.map(n=>'<span style="display:inline-block;background:#111827;padding:2px 8px;border-radius:5px;margin:2px 4px 2px 0;border:1px solid #1e293b">'+n+'</span>').join('') + '</div>' : '') +
+          (exp.path ? '<div style="font-size:.58rem;color:#fcd34d;margin-top:6px">📂 ' + exp.path + '</div>' : '');
+      }
+      toast('Experiment run created — reloading…', 'ok');
+      setTimeout(() => { window.location.reload(); }, 2500);
+    } else {
+      const errMsg = d.error || (resp.ok ? 'Run failed' : (resp.statusText || 'Server error'));
+      if (labelEl) labelEl.textContent = 'Failed';
+      if (status) status.textContent = '⚠️ ' + errMsg;
+      toast('Run failed: ' + errMsg, 'err', 5000);
+      if (runBtn) runBtn.disabled = false;
+      setTimeout(() => { if (wrap) wrap.style.display = 'none'; if (fill) fill.style.width = '0%'; }, 3000);
+    }
+  } catch (e) {
+    clearInterval(progressTimer);
+    if (labelEl) labelEl.textContent = 'Error';
+    if (status) status.textContent = '⚠️ ' + (e.message || 'Cannot reach server');
+    toast('Error: ' + (e.message || 'Cannot reach server'), 'err', 5000);
+    if (runBtn) runBtn.disabled = false;
+    setTimeout(() => { if (wrap) wrap.style.display = 'none'; if (fill) fill.style.width = '0%'; }, 3000);
+  }
+}
+
+function loadRun(idx) {
+  if(idx<0||idx>=RUNS.length) return;
+  const run=RUNS[idx];
+  currentRunId=run.id;
+  PENDING_MAP={}; SPEAKER_MAP={};
+  updateSaveBar();
+
+  const _clRaw=run.clusters_b64 ? b64dec(run.clusters_b64) : null;
+  window._RUN_CLUSTERS=_clRaw ? JSON.parse(_clRaw) : null;
+
+  const rawMap=run.speaker_map||{};
+  const segJson=b64dec(run.segments_b64);
+  SEGMENTS=segJson ? JSON.parse(segJson) : [];
+
+  const allIds=[...new Set(SEGMENTS.map(s=>s.speaker_id))].sort();
+  allIds.forEach(id=>{ SPEAKER_MAP[id]=rawMap[id]||id; });
+  SPEAKERS=allIds;
+  CMAP={}; SPEAKERS.forEach((spk,i)=>{ CMAP[spk]=pal(i); });
+
+  STATS={};
+  SEGMENTS.forEach(seg=>{
+    const spk=seg.speaker_id, dur=Math.max(0,seg.end-seg.start), wc=seg.text.split(' ').length;
+    if(!STATS[spk]) STATS[spk]={total_sec:0,utterances:0,words:0,durations:[]};
+    STATS[spk].total_sec+=dur; STATS[spk].utterances+=1; STATS[spk].words+=wc; STATS[spk].durations.push(dur);
+  });
+  Object.values(STATS).forEach(d=>{ d.avg_dur=d.durations.reduce((a,v)=>a+v,0)/(d.durations.length||1); });
+  TOTAL=SEGMENTS.length ? Math.max(...SEGMENTS.map(s=>s.end)) : 1;
+
+  document.getElementById('meta-line').textContent=
+    `${run.label}  ·  ${SEGMENTS.length} utterances  ·  ${SPEAKERS.length} speakers  ·  ${fmtSec(TOTAL)} total`;
+
+  const audioEl=document.getElementById('audio-el');
+  if(run.audio_b64&&run.audio_b64.length>10) {
+    audioEl.src=`data:${run.audio_mime||'audio/mpeg'};base64,${run.audio_b64}`;
+    audioEl.load(); audioReady=false;
+    audioEl.oncanplay=()=>{ audioReady=true; document.getElementById('playhead-line').style.display='block'; };
+    document.getElementById('audio-filename').textContent=run.audio_name||run.label;
+    document.getElementById('playhead-line').style.display='none';
+  } else {
+    audioEl.src=''; audioReady=false;
+    document.getElementById('audio-filename').textContent='Audio not embedded — too large or not found';
+  }
+
+  activeSpk=null; selectedSeg=null; lastUttIdx=-1; _transcriptFilterSpk=null;
+
+  _momMdContent=b64dec(run.mom_md_b64)||'';
+  _brdMdContent=b64dec(run.brd_md_b64)||'';
+  document.getElementById('mom-editor').value=_momMdContent;
+  document.getElementById('brd-editor').value=_brdMdContent;
+
+  window._rawSegmentsJson=SEGMENTS;
+  window._currentRunHasData=!!(run.has_diarization);
+  renderAll();
+}
+
+function updateSaveBar() {
+  const bar=document.getElementById('save-bar'), n=Object.keys(PENDING_MAP).length;
+  if(n>0) {
+    bar.classList.add('visible');
+    document.getElementById('save-bar-text').textContent=
+      `🏷 ${n} unsaved name${n>1?'s':''}: `+Object.entries(PENDING_MAP).map(([k,v])=>`${k}→${v}`).join(', ');
+  } else { bar.classList.remove('visible'); }
+}
+function discardNames() { PENDING_MAP={}; updateSaveBar(); renderAll(); toast('Changes discarded','err',2000); }
+
+async function saveNames() {
+  if(!hasPendingChanges()) return;
+  Object.assign(SPEAKER_MAP, PENDING_MAP);
+  PENDING_MAP={};
+  updateSaveBar();
+  renderAll();
+  const payload={ run_id: currentRunId, mapping: SPEAKER_MAP };
+  try {
+    const resp=await fetch('/api/save_names',{
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+    });
+    if(resp.ok) {
+      const d=await resp.json();
+      if(d.ok) { toast(`✅ Saved — ${d.files_updated||0} files updated`,'ok'); }
+      else { toast(`⚠️ Save error: ${d.error}`,'err',4000); }
+    } else { toast(`⚠️ Server returned ${resp.status}`,'err',4000); }
+  } catch(e) {
+    toast('✅ Names applied in UI (run Flask server with /api/save_names to persist)','ok',4000);
+  }
+}
+
+let _openDropdown=null;
+function closeAllDropdowns() {
+  document.querySelectorAll('.roster-dropdown.open').forEach(d=>d.classList.remove('open'));
+  _openDropdown=null;
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.lane-label')) closeAllDropdowns(); });
+
+function buildDropdown(spk,anchorEl) {
+  closeAllDropdowns();
+  const dd=document.createElement('div'); dd.className='roster-dropdown open';
+  const search=document.createElement('input');
+  search.className='roster-search'; search.placeholder='Search roster…'; search.type='text';
+  dd.appendChild(search);
+  const list=document.createElement('div');
+  function renderList(filter) {
+    list.innerHTML='';
+    const filtered=filter ? ROSTER.filter(n=>n.toLowerCase().includes(filter.toLowerCase())) : ROSTER;
+    if(filter&&!filtered.includes(filter)) {
+      const custom=document.createElement('div'); custom.className='roster-item';
+      custom.innerHTML=`Use "<span style="color:#fbbf24">${filter}</span>"`;
+      custom.onclick=()=>applyName(spk,filter,dd); list.appendChild(custom);
+      list.appendChild(Object.assign(document.createElement('div'),{className:'roster-divider'}));
+    }
+    filtered.forEach(name=>{ const item=document.createElement('div');
+      item.className='roster-item'+(name===displayName(spk)?' selected-name':'');
+      item.textContent=name; item.onclick=()=>applyName(spk,name,dd); list.appendChild(item); });
+    if(!filtered.length&&!filter) {
+      const e=document.createElement('div'); e.className='roster-item';
+      e.style.color='#334155'; e.textContent='Roster is empty'; list.appendChild(e); }
+  }
+  renderList(''); dd.appendChild(list);
+  dd.appendChild(Object.assign(document.createElement('div'),{className:'roster-divider'}));
+  const clear=document.createElement('div'); clear.className='roster-clear';
+  clear.textContent='✕ Reset to SPEAKER_ID';
+  clear.onclick=()=>{ delete PENDING_MAP[spk]; updateSaveBar(); renderAll(); closeAllDropdowns(); };
+  dd.appendChild(clear);
+  search.addEventListener('input',()=>renderList(search.value));
+  search.addEventListener('keydown',e=>{ if(e.key==='Escape') closeAllDropdowns();
+    if(e.key==='Enter'&&search.value) applyName(spk,search.value,dd); });
+  anchorEl.appendChild(dd); setTimeout(()=>search.focus(),30); _openDropdown=dd;
+}
+function applyName(spk,name,dd) { PENDING_MAP[spk]=name; closeAllDropdowns(); updateSaveBar(); renderAll(); }
+
+function switchTab(name) {
+  ['config','timeline','clusters','transcript','mom','brd','export'].forEach(t=>{
+    document.getElementById('tab-'+t).style.display=t===name?'':'none';
+  });
+  document.querySelectorAll('#main-tabs .tab').forEach(btn=>{
+    btn.classList.toggle('active',btn.dataset.tab===name);
+  });
+  document.getElementById('spk-chips').style.display=(name==='config')?'none':'';
+  if(name==='clusters') buildClustersTab();
+  if(name==='transcript') buildTranscript();
+  if(name==='timeline') { loadDiarInfo(); setTimeout(()=>buildDiarTsne(),120); }
+}
+
+let _diarYamlVisible=false;
+function toggleDiarYaml() {
+  _diarYamlVisible=!_diarYamlVisible;
+  const pre=document.getElementById('diar-yaml-preview');
+  const btn=document.getElementById('diar-yaml-toggle');
+  pre.style.display=_diarYamlVisible?'block':'none';
+  btn.textContent=_diarYamlVisible?'▾ Hide':'▸ Show';
+}
+
+let _diarInfoCache={};
+async function loadDiarInfo() {
+  const runIdx=parseInt(runSel.value,10);
+  const runId=(runIdx>=0&&runIdx<RUNS.length)?RUNS[runIdx].id:'current';
+  try {
+    const resp=await fetch('/api/config?run_id='+encodeURIComponent(runId));
+    const d=await resp.json();
+    if(!d.ok) return;
+    _diarInfoCache=d;
+    document.getElementById('diar-project-name').textContent=d.project_name||'(not set)';
+    document.getElementById('diar-experiment-name').textContent=d.experiment_name||'(not set)';
+    document.getElementById('diar-audio-path').textContent=d.audio_path||'(default)';
+    document.getElementById('diar-exp-path').textContent=d.gcs_path||'—';
+    document.getElementById('diar-yaml-preview').textContent=(d.yaml_raw&&d.yaml_raw.trim())||'(no YAML)';
+  } catch(e) {
+    console.warn('loadDiarInfo failed',e);
+  }
+}
+
+let _pipeSettingsVisible=false;
+function togglePipelineSettings() {
+  _pipeSettingsVisible=!_pipeSettingsVisible;
+  document.getElementById('pipe-settings-body').style.display=_pipeSettingsVisible?'block':'none';
+  document.getElementById('pipe-settings-toggle').textContent=_pipeSettingsVisible?'▾ Hide':'▸ Show';
+  if(_pipeSettingsVisible) loadPipelineSettings();
+}
+
+function _setVal(id,v){ const el=document.getElementById(id); if(el) el.value=v; }
+function _setChk(id,v){ const el=document.getElementById(id); if(el) el.checked=!!v; }
+function _getVal(id){ const el=document.getElementById(id); return el?el.value:''; }
+function _getNum(id){ const el=document.getElementById(id); return el&&el.value!==''?Number(el.value):null; }
+function _getChk(id){ const el=document.getElementById(id); return el?el.checked:false; }
+
+function _initToggleLabels() {
+  const pairs=[['ps-vad-filter','ps-vad-filter-label']];
+  pairs.forEach(([inputId,labelId])=>{
+    const inp=document.getElementById(inputId);
+    const lbl=document.getElementById(labelId);
+    if(inp&&lbl){ const upd=()=>{lbl.textContent=inp.checked?'on':'off';}; inp.addEventListener('change',upd); upd(); }
+  });
+}
+
+async function loadPipelineSettings() {
+  const runIdx=parseInt(runSel.value,10);
+  const runId=(runIdx>=0&&runIdx<RUNS.length)?RUNS[runIdx].id:'current';
+  try {
+    const resp=await fetch('/api/config?run_id='+encodeURIComponent(runId));
+    const d=await resp.json();
+    if(!d.ok) return;
+    const asr=d.asr||{};
+    _setVal('ps-whisper-model', asr.whisper_model||'base.en');
+    _setVal('ps-beam-size', asr.beam_size!=null?asr.beam_size:5);
+    _setChk('ps-vad-filter', asr.vad_filter!=null?asr.vad_filter:true);
+    _setVal('ps-vad-silence', asr.vad_silence_ms!=null?asr.vad_silence_ms:500);
+    _setVal('ps-no-speech-thresh', asr.no_speech_thresh!=null?asr.no_speech_thresh:0.6);
+    _setChk('ps-remove-fillers', asr.remove_fillers!=null?asr.remove_fillers:true);
+    _setChk('ps-remove-stutters', asr.remove_stutters!=null?asr.remove_stutters:true);
+    _setChk('ps-remove-repeats', asr.remove_repeats!=null?asr.remove_repeats:true);
+    const diar=d.diarization||{};
+    _setVal('ps-max-speakers', diar.max_speakers!=null?diar.max_speakers:8);
+    _setVal('ps-smooth-window', diar.smooth_window!=null?diar.smooth_window:3);
+    _setVal('ps-min-seg-dur', diar.min_seg_dur!=null?diar.min_seg_dur:0.4);
+    _setVal('ps-pca-variance', diar.pca_variance!=null?diar.pca_variance:0.99);
+    _setVal('ps-linkage', diar.linkage||'average');
+    _setVal('ps-metric', diar.metric||'cosine');
+    _initToggleLabels();
+  } catch(e) {
+    console.warn('loadPipelineSettings failed',e);
+  }
+}
+
+async function savePipelineSettings() {
+  const btn=document.getElementById('ps-apply-btn');
+  const status=document.getElementById('ps-status');
+  if(btn) btn.disabled=true;
+  if(status) status.textContent='Saving…';
+  const payload={
+    asr:{
+      whisper_model: _getVal('ps-whisper-model'),
+      beam_size: _getNum('ps-beam-size'),
+      vad_filter: _getChk('ps-vad-filter'),
+      vad_silence_ms: _getNum('ps-vad-silence'),
+      no_speech_thresh: _getNum('ps-no-speech-thresh'),
+      remove_fillers: _getChk('ps-remove-fillers'),
+      remove_stutters: _getChk('ps-remove-stutters'),
+      remove_repeats: _getChk('ps-remove-repeats'),
+    },
+    diarization:{
+      max_speakers: _getNum('ps-max-speakers'),
+      smooth_window: _getNum('ps-smooth-window'),
+      min_seg_dur: _getNum('ps-min-seg-dur'),
+      pca_variance: _getNum('ps-pca-variance'),
+      linkage: _getVal('ps-linkage'),
+      metric: _getVal('ps-metric'),
+    },
+  };
+  try {
+    const resp=await fetch('/api/save_config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await resp.json();
+    if(d.ok){
+      if(status) status.textContent='✅ Settings saved';
+      toast('Pipeline settings saved','ok');
+      loadDiarInfo();
+    } else {
+      if(status) status.textContent='⚠️ '+(d.error||'Save failed');
+      toast('Save failed: '+(d.error||'Unknown'),'err',4000);
+    }
+  } catch(e){
+    if(status) status.textContent='⚠️ Cannot reach server';
+    toast('Cannot reach server','err',4000);
+  } finally {
+    if(btn) btn.disabled=false;
+    setTimeout(()=>{ if(status) status.textContent=''; },4000);
+  }
+}
+
+function buildDiarTsne() {
+  buildPlotlyScatter('tsne','diar-tsne-plotly','diar-tsne-legend');
+}
+
+function buildChips() {
+  const el=document.getElementById('spk-chips'); el.innerHTML='';
+  const all=document.createElement('button');
+  all.className='chip'+(activeSpk?'':' active'); all.textContent='All speakers';
+  all.style.setProperty('--chip-color','#3b82f6'); all.style.setProperty('--chip-light','#93c5fd');
+  all.onclick=()=>{ activeSpk=null; renderAll(); }; el.appendChild(all);
+  SPEAKERS.forEach(spk=>{
+    const c=CMAP[spk], btn=document.createElement('button');
+    btn.className='chip'+(activeSpk===spk?' active':'');
+    btn.style.setProperty('--chip-color',c.bg); btn.style.setProperty('--chip-light',c.light);
+    btn.textContent=displayName(spk);
+    btn.onclick=()=>{ activeSpk=(activeSpk===spk)?null:spk; renderAll(); };
+    el.appendChild(btn);
+  });
+}
+function renderAll() {
+  buildChips(); buildTimeline(); buildUttLog();
+  if(document.getElementById('tab-timeline').style.display!=='none') setTimeout(()=>buildDiarTsne(),80);
+}
+
+function buildTimeline() {
+  const cont=document.getElementById('lanes-container'); cont.innerHTML='';
+  if(!SEGMENTS.length) {
+    cont.innerHTML='<div style="padding:24px;text-align:center;color:#475569;font-size:.68rem">No diarization data — run the pipeline first.</div>';
+    document.getElementById('ruler').innerHTML='';
+    return;
+  }
+  const filtered=activeSpk?SEGMENTS.filter(s=>s.speaker_id===activeSpk):SEGMENTS;
+  SPEAKERS.forEach(spk=>{
+    const c=CMAP[spk], segs=filtered.filter(s=>s.speaker_id===spk);
+    if(!segs.length&&activeSpk&&activeSpk!==spk) return;
+    const row=document.createElement('div'); row.className='lane-row';
+    const isPending=spk in PENDING_MAP, labelDiv=document.createElement('div');
+    labelDiv.className='lane-label';
+    const labelBtn=document.createElement('span');
+    labelBtn.className='lane-label-btn'+(isPending?' tagged':''); labelBtn.style.color=c.light;
+    labelBtn.innerHTML=`${displayName(spk)} <span class="edit-icon">${isPending?'✓':'✎'}</span>`;
+    labelBtn.onclick=e=>{ e.stopPropagation(); buildDropdown(spk,labelDiv); };
+    labelDiv.appendChild(labelBtn);
+    const trackDiv=document.createElement('div');
+    trackDiv.className='lane-track'; trackDiv.id=`track-${CSS.escape(spk)}`;
+    row.appendChild(labelDiv); row.appendChild(trackDiv); cont.appendChild(row);
+    segs.forEach(seg=>{
+      const left=(seg.start/TOTAL)*100, width=Math.max(0.15,((seg.end-seg.start)/TOTAL)*100);
+      const block=document.createElement('div');
+      block.className='seg-block'+(selectedSeg&&selectedSeg.start===seg.start?' selected':'');
+      block.style.cssText=`left:${left}%;width:${width}%;background:${c.bg}`;
+      block.title=`${displayName(spk)} · ${fmtSec(seg.start)}–${fmtSec(seg.end)}: ${seg.text.slice(0,80)}`;
+      block.onclick=e=>{ e.stopPropagation(); selectSeg(seg); }; trackDiv.appendChild(block);
+    });
+    trackDiv.addEventListener('mousemove',e=>{
+      const rect=trackDiv.getBoundingClientRect(), pct=(e.clientX-rect.left)/rect.width;
+      const ovRect=document.getElementById('cursor-overlay').getBoundingClientRect();
+      const cl=document.getElementById('cursor-line');
+      cl.style.cssText=`display:block;left:${e.clientX-ovRect.left}px;top:0;bottom:0;position:absolute;width:1px;background:#ffffff22`;
+      document.getElementById('cursor-time').textContent=fmtSec(pct*TOTAL);
+    });
+    trackDiv.addEventListener('mouseleave',()=>{ document.getElementById('cursor-line').style.display='none'; });
+    trackDiv.addEventListener('click',e=>{
+      if(!audioReady) return;
+      const rect=trackDiv.getBoundingClientRect();
+      const a=document.getElementById('audio-el');
+      a.currentTime=Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*TOTAL;
+      a.play().catch(()=>{});
+    });
+  });
+  buildRuler();
+}
+
+function buildRuler() {
+  const ruler=document.getElementById('ruler'); ruler.innerHTML='';
+  const ticks=Math.min(12,Math.ceil(TOTAL/60));
+  for(let i=0;i<=ticks;i++) {
+    const t=i*(TOTAL/ticks), d=document.createElement('div');
+    d.style.cssText=`position:absolute;left:${(t/TOTAL)*100}%;transform:translateX(-50%);font-size:.52rem;color:#334155`;
+    d.textContent=fmtSec(t); ruler.appendChild(d);
+  }
+}
+
+function selectSeg(seg) {
+  selectedSeg=selectedSeg&&selectedSeg.start===seg.start?null:seg;
+  const box=document.getElementById('detail-box');
+  if(!selectedSeg) { box.style.display='none'; buildTimeline(); buildUttLog(); return; }
+  const c=CMAP[seg.speaker_id]||{bg:'#6366f1',light:'#a5b4fc'};
+  box.style.cssText=`display:block;background:${c.bg}18;border-color:${c.bg}50;margin-bottom:14px;border-radius:10px;padding:12px 16px;border:1px solid`;
+  box.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:7px;align-items:center">
+    <span style="font-size:.68rem;color:${c.light}">${displayName(seg.speaker_id)}</span>
+    <span style="font-size:.6rem;color:#475569">${fmtSec(seg.start)} → ${fmtSec(seg.end)} (${Math.round(seg.end-seg.start)}s)</span>
+  </div><p style="font-size:.8rem;line-height:1.65;color:#cbd5e1">${seg.text}</p>`;
+  buildTimeline(); buildUttLog();
+  if(audioReady&&seg) { const a=document.getElementById('audio-el'); a.currentTime=seg.start; a.play().catch(()=>{}); }
+}
+
+function buildUttLog() {
+  const el=document.getElementById('utt-log'), hdr=document.getElementById('log-header');
+  const segs=activeSpk?SEGMENTS.filter(s=>s.speaker_id===activeSpk):SEGMENTS;
+  hdr.textContent=`UTTERANCES${activeSpk?' · '+displayName(activeSpk):''} (${segs.length})`;
+  el.innerHTML='';
+  if(!segs.length) {
+    el.innerHTML='<div style="padding:24px;text-align:center;color:#475569;font-size:.68rem">No utterances — run diarization to generate.</div>';
+    return;
+  }
+  segs.forEach(seg=>{
+    const c=CMAP[seg.speaker_id]||{bg:'#6366f1',light:'#94a3b8'};
+    const row=document.createElement('div');
+    row.className='utt-row'+(selectedSeg&&selectedSeg.start===seg.start?' active':'');
+    row.innerHTML=`<div style="width:2px;flex-shrink:0;align-self:stretch;background:${c.bg};border-radius:1px;opacity:.7"></div>
+      <div class="utt-time">${fmtSec(seg.start)}</div>
+      <div class="utt-spk" style="color:${c.light}">${displayName(seg.speaker_id)}</div>
+      <div class="utt-text">${seg.text}</div>`;
+    row.onclick=()=>selectSeg(seg); el.appendChild(row);
+  });
+}
+
+const audioEl=document.getElementById('audio-el');
+const timeDisp=document.getElementById('audio-time-disp');
+const playhead=document.getElementById('playhead-line');
+const playLabel=document.getElementById('playhead-label');
+const playBtn=document.getElementById('play-pause-btn');
+function togglePlay() { if(audioEl.paused) audioEl.play().catch(()=>{}); else audioEl.pause(); }
+audioEl.addEventListener('play',()=>{ playBtn.textContent='⏸ Pause'; });
+audioEl.addEventListener('pause',()=>{ playBtn.textContent='▶ Play'; });
+audioEl.addEventListener('timeupdate',()=>{
+  const t=audioEl.currentTime, dur=audioEl.duration||TOTAL;
+  timeDisp.textContent=`${fmtSec(t)} / ${fmtSec(dur)}`;
+  const overlay=document.getElementById('playhead-overlay');
+  const trackW=overlay.getBoundingClientRect().width;
+  playhead.style.left=(t/TOTAL)*trackW+'px'; playhead.style.display='block';
+  playLabel.textContent=fmtSec(t);
+  let nowIdx=-1;
+  for(let i=0;i<SEGMENTS.length;i++) { if(t>=SEGMENTS[i].start&&t<SEGMENTS[i].end){nowIdx=i;break;} }
+  if(nowIdx!==lastUttIdx) {
+    lastUttIdx=nowIdx;
+    document.querySelectorAll('.utt-row.now-playing').forEach(r=>r.classList.remove('now-playing'));
+    if(nowIdx>=0) {
+      const rows=document.getElementById('utt-log').querySelectorAll('.utt-row');
+      if(rows[nowIdx]) { rows[nowIdx].classList.add('now-playing'); rows[nowIdx].scrollIntoView({block:'nearest',behavior:'smooth'}); }
+    }
+  }
+});
+
+function buildClustersTab() {
+  buildBarCharts();
+  buildPlotlyScatter('pca','pca-plotly','pca-legend');
+  buildPlotlyScatter('tsne','tsne-plotly','tsne-legend');
+  buildPlotly3D('tsne3d-plotly','tsne3d-legend');
+}
+
+function buildBarChart(containerId, data, valFn, labelFn, colorFn) {
+  const el=document.getElementById(containerId); if(!el) return;
+  el.innerHTML='';
+  const max=Math.max(...data.map(valFn),1);
+  data.forEach(d=>{
+    const c=colorFn(d), v=valFn(d), pct=Math.round((v/max)*100);
+    const row=document.createElement('div'); row.className='bar-row';
+    row.innerHTML=`<div class="bar-label"><span style="color:${c.light}">${displayName(d.spk)}</span><span style="color:#475569">${labelFn(d,v)}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${c.bg},${c.bg}99)"></div></div>`;
+    el.appendChild(row);
+  });
+}
+
+function buildBarCharts() {
+  const data=SPEAKERS.filter(s=>STATS[s]).map(s=>({spk:s,...STATS[s]}));
+  if(!data.length) return;
+  const cf=d=>CMAP[d.spk]||{bg:'#6366f1',light:'#a5b4fc'};
+  buildBarChart('chart-words',data,d=>d.words,(d,v)=>`${v.toLocaleString()} words`,cf);
+  buildBarChart('chart-turns',data,d=>d.utterances,(d,v)=>`${v} turns`,cf);
+}
+
+function buildPlotlyScatter(key, divId, legId) {
+  const div=document.getElementById(divId); if(!div) return;
+  const leg=document.getElementById(legId); if(leg) leg.innerHTML='';
+  const _c=window._RUN_CLUSTERS||CLUSTERS;
+  const pts=(_c&&_c[key])?_c[key]:null;
+  if(!pts||!pts.length) {
+    div.innerHTML='<div style="color:#334155;font-size:.65rem;padding:20px;text-align:center">No embedding data — re-run pipeline to generate clusters.</div>';
+    return;
+  }
+  const spkGroups={};
+  pts.forEach(p=>{ if(!spkGroups[p.spk]) spkGroups[p.spk]=[]; spkGroups[p.spk].push(p); });
+  const traces=[];
+  Object.entries(spkGroups).forEach(([spk,spts],i)=>{
+    const c=CMAP[spk]||pal(i);
+    traces.push({ x:spts.map(p=>p.x), y:spts.map(p=>p.y),
+      mode:'markers', type:'scatter', name:displayName(spk),
+      marker:{color:c.bg, size:7, opacity:0.65, line:{color:'#09090e',width:0.5}},
+      text:spts.map(p=>`${displayName(spk)}<br>${fmtSec(p.start||0)} → ${fmtSec(p.end||0)}<br><i>${(p.text||'').slice(0,80)}</i>`),
+      hovertemplate:'%{text}<extra></extra>', showlegend:false });
+    const cx=spts.reduce((a,p)=>a+p.x,0)/spts.length;
+    const cy=spts.reduce((a,p)=>a+p.y,0)/spts.length;
+    traces.push({ x:[cx], y:[cy], mode:'markers', type:'scatter', name:displayName(spk),
+      marker:{color:c.bg, size:18, opacity:1, symbol:'circle',
+              line:{color:'#ffffff',width:2}},
+      text:[`${displayName(spk)} — centroid`],
+      hovertemplate:'%{text}<extra></extra>', showlegend:true });
+  });
+  const layout={ paper_bgcolor:'transparent', plot_bgcolor:'#0a0a10',
+    margin:{l:30,r:10,t:10,b:30}, font:{family:'DM Mono',size:10,color:'#475569'},
+    xaxis:{gridcolor:'#111827',zerolinecolor:'#1e293b',tickfont:{size:9}},
+    yaxis:{gridcolor:'#111827',zerolinecolor:'#1e293b',tickfont:{size:9}},
+    legend:{bgcolor:'transparent',font:{size:10,color:'#94a3b8'},
+            orientation:'h',x:0,y:-0.15},
+    height:340 };
+  Plotly.newPlot(div,traces,layout,{displayModeBar:false,responsive:true});
+  if(leg) Object.entries(spkGroups).forEach(([spk],i)=>{
+    const c=CMAP[spk]||pal(i);
+    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:5px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${c.bg};border:2px solid #fff"></div>
+      <span style="font-size:.6rem;color:#475569">${displayName(spk)}</span></div>`;
+  });
+}
+
+function buildPlotly3D(divId, legId) {
+  const div=document.getElementById(divId); if(!div) return;
+  const leg=document.getElementById(legId); if(leg) leg.innerHTML='';
+  const _c=window._RUN_CLUSTERS||CLUSTERS;
+  const pts=(_c&&_c['tsne3d'])?_c['tsne3d']:((_c&&_c['tsne'])?_c['tsne'].map(p=>({...p,z:0})):null);
+  if(!pts||!pts.length) {
+    div.innerHTML='<div style="color:#334155;font-size:.65rem;padding:20px;text-align:center">No 3D embedding data — re-run pipeline with tsne3d enabled.</div>';
+    return;
+  }
+  const spkGroups={};
+  pts.forEach(p=>{ if(!spkGroups[p.spk]) spkGroups[p.spk]=[]; spkGroups[p.spk].push(p); });
+  const traces=[];
+  Object.entries(spkGroups).forEach(([spk,spts],i)=>{
+    const c=CMAP[spk]||pal(i);
+    traces.push({ x:spts.map(p=>p.x), y:spts.map(p=>p.y), z:spts.map(p=>p.z||0),
+      mode:'markers', type:'scatter3d', name:displayName(spk),
+      marker:{color:c.bg, size:5, opacity:0.65, line:{color:'#09090e',width:0.3}},
+      text:spts.map(p=>`${displayName(spk)}<br>${(p.text||'').slice(0,60)}`),
+      hovertemplate:'%{text}<extra></extra>', showlegend:false });
+    const cx=spts.reduce((a,p)=>a+p.x,0)/spts.length;
+    const cy=spts.reduce((a,p)=>a+p.y,0)/spts.length;
+    const cz=spts.reduce((a,p)=>a+(p.z||0),0)/spts.length;
+    traces.push({ x:[cx], y:[cy], z:[cz], mode:'markers', type:'scatter3d', name:displayName(spk),
+      marker:{color:c.bg, size:14, opacity:1, line:{color:'#ffffff',width:2}},
+      text:[`${displayName(spk)} — centroid`],
+      hovertemplate:'%{text}<extra></extra>', showlegend:true });
+  });
+  const layout={ paper_bgcolor:'transparent',
+    scene:{bgcolor:'#0a0a10',
+      xaxis:{gridcolor:'#1e293b',zerolinecolor:'#1e293b',showbackground:false,tickfont:{size:9,color:'#475569'}},
+      yaxis:{gridcolor:'#1e293b',zerolinecolor:'#1e293b',showbackground:false,tickfont:{size:9,color:'#475569'}},
+      zaxis:{gridcolor:'#1e293b',zerolinecolor:'#1e293b',showbackground:false,tickfont:{size:9,color:'#475569'}}},
+    margin:{l:0,r:0,t:0,b:0},
+    legend:{bgcolor:'transparent',font:{size:10,color:'#94a3b8'},orientation:'h',x:0,y:-0.05},
+    height:340 };
+  Plotly.newPlot(div,traces,layout,{displayModeBar:false,responsive:true});
+  if(leg) Object.entries(spkGroups).forEach(([spk],i)=>{
+    const c=CMAP[spk]||pal(i);
+    leg.innerHTML+=`<div style="display:flex;align-items:center;gap:5px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${c.bg};border:2px solid #fff"></div>
+      <span style="font-size:.6rem;color:#475569">${displayName(spk)}</span></div>`;
+  });
+}
+
+function buildTranscript() {
+  const bar=document.getElementById('transcript-spk-bar'); bar.innerHTML='';
+  const allBtn=document.createElement('button');
+  allBtn.className='transcript-spk-btn'+(_transcriptFilterSpk?'':' active');
+  allBtn.textContent='All'; allBtn.style.setProperty('--spk-color','#3b82f6'); allBtn.style.setProperty('--spk-light','#93c5fd');
+  allBtn.onclick=()=>{ _transcriptFilterSpk=null; applyTranscriptFilter(); refreshSpkBtns(); };
+  bar.appendChild(allBtn);
+  SPEAKERS.forEach(spk=>{
+    const c=CMAP[spk], btn=document.createElement('button');
+    btn.className='transcript-spk-btn'+(_transcriptFilterSpk===spk?' active':'');
+    btn.dataset.spk=spk; btn.style.setProperty('--spk-color',c.bg); btn.style.setProperty('--spk-light',c.light);
+    btn.textContent=displayName(spk);
+    btn.onclick=()=>{ _transcriptFilterSpk=(_transcriptFilterSpk===spk)?null:spk; applyTranscriptFilter(); refreshSpkBtns(); };
+    bar.appendChild(btn);
+  });
+
+  const body=document.getElementById('transcript-body'); body.innerHTML='';
+  const meta=document.getElementById('transcript-meta');
+  meta.textContent=`${SEGMENTS.length} utterances · ${SPEAKERS.length} speakers`;
+  SEGMENTS.forEach((seg,idx)=>{
+    const c=CMAP[seg.speaker_id]||{bg:'#6366f1',light:'#a5b4fc'};
+    const dur=seg.end-seg.start;
+    const block=document.createElement('div');
+    block.className='turn-block'; block.dataset.spk=seg.speaker_id;
+    block.innerHTML=`
+      <div class="turn-meta">
+        <div class="turn-spk-name" style="color:${c.light}">${displayName(seg.speaker_id)}</div>
+        <div class="turn-times">${fmtSec(seg.start)} → ${fmtSec(seg.end)}</div>
+        <div class="turn-dur">${fmtDur(dur)}</div>
+      </div>
+      <div class="turn-text">${seg.text}</div>`;
+    block.onclick=()=>selectSeg(seg);
+    body.appendChild(block);
+  });
+  applyTranscriptFilter();
+}
+
+function applyTranscriptFilter() {
+  document.querySelectorAll('#transcript-body .turn-block').forEach(b=>{
+    const hidden=_transcriptFilterSpk&&b.dataset.spk!==_transcriptFilterSpk;
+    b.classList.toggle('filtered-hidden',hidden);
+  });
+}
+function refreshSpkBtns() {
+  document.querySelectorAll('#transcript-spk-bar .transcript-spk-btn').forEach(btn=>{
+    const spk=btn.dataset.spk;
+    if(!spk) btn.classList.toggle('active',!_transcriptFilterSpk);
+    else btn.classList.toggle('active',_transcriptFilterSpk===spk);
+  });
+}
+
+function setMomView(mode) {
+  const editor=document.getElementById('mom-editor'), viewer=document.getElementById('mom-viewer');
+  const editBtn=document.getElementById('mom-edit-btn'), viewBtn=document.getElementById('mom-view-btn');
+  if(mode==='edit') {
+    editor.style.display=''; viewer.style.display='none';
+    editBtn.classList.add('active'); viewBtn.classList.remove('active');
+  } else {
+    editor.style.display='none'; viewer.style.display='';
+    editBtn.classList.remove('active'); viewBtn.classList.add('active');
+    viewer.innerHTML=mdToHtml(editor.value);
+  }
+}
+async function saveMomMd() {
+  const content=document.getElementById('mom-editor').value;
+  try {
+    const resp=await fetch('/api/save_mom',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({run_id:currentRunId, content})
+    });
+    if(resp.ok) toast('✅ MoM.md saved','ok');
+    else toast('⚠️ Save failed — check Flask server','err',4000);
+  } catch(e) { toast('⚠️ No server — copy content manually','err',4000); }
+}
+
+function setBrdView(mode) {
+  const editor=document.getElementById('brd-editor'), viewer=document.getElementById('brd-viewer');
+  const editBtn=document.getElementById('brd-edit-btn'), viewBtn=document.getElementById('brd-view-btn');
+  if(mode==='edit') {
+    editor.style.display=''; viewer.style.display='none';
+    editBtn.classList.add('active'); viewBtn.classList.remove('active');
+  } else {
+    editor.style.display='none'; viewer.style.display='';
+    editBtn.classList.remove('active'); viewBtn.classList.add('active');
+    viewer.innerHTML=mdToHtml(editor.value);
+  }
+}
+async function saveBrdMd() {
+  const content=document.getElementById('brd-editor').value;
+  try {
+    const resp=await fetch('/api/save_brd',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({run_id:currentRunId, content})
+    });
+    if(resp.ok) toast('✅ BRD.md saved','ok');
+    else toast('⚠️ Save failed — check Flask server','err',4000);
+  } catch(e) { toast('⚠️ No server — copy content manually','err',4000); }
+}
+
+function mdToHtml(md) {
+  if(!md) return '<p style="color:#334155;font-style:italic">No content yet.</p>';
+  let h=md
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+    .replace(/^\> (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/^---$/gm,'<hr>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^\- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/\n\n/g,'</p><p>');
+  return `<p>${h}</p>`;
+}
+
+function toggleExportFmt(btn, docType) {
+  document.querySelectorAll(`#${docType}-export-formats .export-fmt-btn`).forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function getSelectedFmt(docType) {
+  const sel=document.querySelector(`#${docType}-export-formats .export-fmt-btn.selected`);
+  return sel ? sel.dataset.fmt : 'pdf';
+}
+async function triggerExport(docType) {
+  const fmt=getSelectedFmt(docType);
+  const statusEl=document.getElementById(`${docType}-export-status`);
+  const logEl=document.getElementById('export-log');
+  statusEl.textContent='Exporting…';
+  const ts=new Date().toLocaleTimeString();
+  try {
+    const resp=await fetch('/api/export',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({run_id:currentRunId, doc_type:docType, format:fmt})
+    });
+    if(resp.ok) {
+      const d=await resp.json();
+      if(d.ok) {
+        statusEl.textContent=`✅ Exported → ${d.path||''}`;
+        logEl.innerHTML=`<div style="color:#34d399">[${ts}] ${docType.toUpperCase()} → ${fmt.toUpperCase()} · ${d.path||''}</div>`+logEl.innerHTML;
+      } else {
+        statusEl.textContent=`⚠️ ${d.error}`;
+        logEl.innerHTML=`<div style="color:#ef4444">[${ts}] FAILED: ${d.error}</div>`+logEl.innerHTML;
+      }
+    } else { statusEl.textContent=`⚠️ Server error ${resp.status}`; }
+  } catch(e) {
+    statusEl.textContent='⚠️ No server — run Flask server first';
+    logEl.innerHTML=`<div style="color:#ef4444">[${ts}] No server running</div>`+logEl.innerHTML;
+  }
+}
+
+async function generateMom() {
+  const btn = document.getElementById('mom-generate-btn');
+  const statusEl = document.getElementById('mom-gen-status');
+  const statusTxt = document.getElementById('mom-gen-status-text');
+  const ctx = (document.getElementById('mom-context-input').value || '').trim();
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  statusEl.style.display = ''; statusTxt.textContent = 'Calling LLM backend…';
+  try {
+    const resp = await fetch('/api/generate_mom', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({run_id: currentRunId, context: ctx})
+    });
+    const d = await resp.json();
+    if (d.ok && d.mom_md) {
+      document.getElementById('mom-editor').value = d.mom_md;
+      setMomView('edit');
+      toast('✅ Minutes generated successfully', 'ok');
+      statusTxt.textContent = '✅ Done';
+    } else {
+      toast('⚠️ Generation failed: ' + (d.error || 'unknown error'), 'err', 5000);
+      statusTxt.textContent = '⚠️ ' + (d.error || 'Generation failed');
+    }
+  } catch(e) {
+    toast('⚠️ No Flask server or LLM backend configured', 'err', 5000);
+    statusTxt.textContent = '⚠️ Cannot reach server';
+  }
+  btn.disabled = false; btn.textContent = '⚡ Generate Minutes';
+}
+
+async function generateBrd() {
+  const btn = document.getElementById('brd-generate-btn');
+  const statusEl = document.getElementById('brd-gen-status');
+  const statusTxt = document.getElementById('brd-gen-status-text');
+  const ctx = (document.getElementById('brd-context-input').value || '').trim();
+  btn.disabled = true; btn.textContent = '⏳ Generating…';
+  statusEl.style.display = ''; statusTxt.textContent = 'Calling LLM backend…';
+  try {
+    const resp = await fetch('/api/generate_brd', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({run_id: currentRunId, context: ctx})
+    });
+    const d = await resp.json();
+    if (d.ok && d.brd_md) {
+      document.getElementById('brd-editor').value = d.brd_md;
+      setBrdView('edit');
+      toast('✅ BRD generated successfully', 'ok');
+      statusTxt.textContent = '✅ Done';
+    } else {
+      toast('⚠️ Generation failed: ' + (d.error || 'unknown error'), 'err', 5000);
+      statusTxt.textContent = '⚠️ ' + (d.error || 'Generation failed');
+    }
+  } catch(e) {
+    toast('⚠️ No Flask server or LLM backend configured', 'err', 5000);
+    statusTxt.textContent = '⚠️ Cannot reach server';
+  }
+  btn.disabled = false; btn.textContent = '⚡ Generate BRD';
+}
+
+async function initConfigTab() {
+  try {
+    const resp = await fetch('/api/config');
+    const d = await resp.json();
+    if (!d.ok) return;
+    document.getElementById('cfg-project-name').value = d.project_name || '';
+    document.getElementById('cfg-experiment-name').value = d.experiment_name || '';
+    document.getElementById('cfg-context').value = d.context || '';
+    document.getElementById('cfg-num-speakers').value = d.num_speakers != null ? d.num_speakers : '';
+    const lbl = document.getElementById('cfg-audio-label');
+    lbl.textContent = d.audio_path ? `Current audio: ${d.audio_path}` : 'Current: uses default audio from cfg/config.yaml';
+    const yamlEl = document.getElementById('cfg-yaml-preview');
+    if (yamlEl) yamlEl.textContent = (d.yaml_raw && d.yaml_raw.trim()) ? d.yaml_raw : 'Click “Load config” to show YAML for the selected project/run.';
+  } catch (e) {
+    console.warn('config load failed', e);
+    const yamlEl = document.getElementById('cfg-yaml-preview');
+    if (yamlEl) yamlEl.textContent = 'Could not load config. Check that the server is running and refresh the page.';
+  }
+
+  const fileInput = document.getElementById('cfg-audio-file');
+  const lbl = document.getElementById('cfg-audio-label');
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    lbl.textContent = 'Uploading audio…';
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const resp = await fetch('/api/upload_audio', { method: 'POST', body: fd });
+      const d = await resp.json();
+      if (d.ok) {
+        lbl.textContent = `Uploaded: ${d.filename}`;
+      } else {
+        lbl.textContent = `Error: ${d.error}`;
+      }
+    } catch (err) {
+      lbl.textContent = 'Upload failed — check server logs';
+    }
+  });
+
+  const saveBtn = document.getElementById('cfg-save-btn');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async function() {
+      const status = document.getElementById('cfg-save-status');
+      const btn = this;
+      btn.disabled = true;
+      if (status) status.textContent = 'Saving…';
+
+      const payload = {
+        project_name: (document.getElementById('cfg-project-name') || {}).value || '',
+        experiment_name: (document.getElementById('cfg-experiment-name') || {}).value || '',
+        context: (document.getElementById('cfg-context') || {}).value || '',
+        num_speakers: (document.getElementById('cfg-num-speakers') || {}).value || null,
+      };
+      try {
+        const resp = await fetch('/api/save_config', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+        let d = {};
+        try { d = await resp.json(); } catch(_) { d = { ok: false, error: 'Invalid server response' }; }
+        if (d.ok) {
+          if (status) status.textContent = '✅ Saved';
+          toast('Configuration saved', 'ok');
+          const projectName = (payload.project_name || '').trim();
+          if (RUNS.length > 0 && RUNS[0].id === 'current') {
+            RUNS[0].label = projectName ? `Current (latest) — ${projectName}` : 'Current (latest)';
+            if (runSel.options && runSel.options[0]) runSel.options[0].textContent = RUNS[0].label;
+            if (runSel.value === '0') {
+              const ml = document.getElementById('meta-line');
+              if (ml) ml.textContent = RUNS[0].label + '  ·  ' + SEGMENTS.length + ' utterances  ·  ' + SPEAKERS.length + ' speakers  ·  ' + fmtSec(TOTAL) + ' total';
+            }
+          }
+          const yamlPreview = document.getElementById('cfg-yaml-preview');
+          if (yamlPreview && d.yaml_raw != null) {
+            yamlPreview.textContent = (d.yaml_raw && d.yaml_raw.trim()) ? d.yaml_raw : '(Saved config — no YAML content)';
+          }
+        } else {
+          if (status) status.textContent = '⚠️ ' + (d.error || 'Save failed');
+          toast('Save failed: ' + (d.error || 'Unknown error'), 'err', 5000);
+        }
+      } catch (e) {
+        if (status) status.textContent = '⚠️ Cannot reach server';
+        toast('Cannot reach server: ' + (e.message || ''), 'err', 5000);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  const runBtnEl = document.getElementById('cfg-run-btn');
+  if (runBtnEl) {
+    runBtnEl.addEventListener('click', function() { runDiarization(); });
+  }
+}
+
+if (RUNS.length > 0) {
+  loadRun(DEFAULT_RUN);
+} else {
+  document.getElementById('meta-line').textContent = 'No runs found — run diarization first.';
+}
+initConfigTab();
+</script>
+</body>
+</html>
+

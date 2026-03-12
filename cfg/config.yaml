@@ -1,0 +1,78 @@
+project_name: kar
+experiment_name: r002
+audio:
+  format: mp3
+  gdrive_url: https://drive.google.com/uc?id=1bg6ZJCHLlOcM00Au1mknhWU7ANM_Fh2F
+meeting:
+  label: kar
+  num_speakers: 2
+  company_roster:
+  - Alice Johnson
+  - Bob Smith
+  - Carol White
+  - David Lee
+asr:
+  whisper_model: small.en
+  beam_size: 5
+  best_of: 5
+  vad_filter: true
+  vad_silence_ms: 500
+  condition_on_prev: true
+  no_speech_thresh: 0.6
+  log_prob_thresh: -1.0
+  compress_thresh: 2.4
+  remove_fillers: true
+  remove_stutters: true
+  remove_repeats: true
+diarization:
+  max_speakers: 8
+  smooth_window: 3
+  min_seg_dur: 0.4
+  pca_variance: 0.99
+  linkage: average
+  metric: cosine
+  use_utterance_embeddings: true
+llm:
+  provider: google
+  model: models/gemini-2.5-flash
+  temperature: 0.7
+  max_output_tokens: 8192
+  top_p: 0.95
+seed: 42
+paths:
+  project_root: .
+  scripts_dir: dn_studio
+  outputs_root: outputs
+  output_dir: outputs
+  audio: C:\Users\Selvam Sabarish\Downloads\ki\inputs\meeting_audio.mp3
+  input_transcript: outputs/diarization/transcript.json
+  response_mom: outputs/response-mom.json
+  response_brd: outputs/response-brd.json
+  prompt_mom: prompts/mom_prompt.json
+  prompt_brd: prompts/brd_prompt.json
+  diarization:
+    clusters: outputs/diarization/clusters.json
+    summary: outputs/diarization/summary.json
+    transcript_json: outputs/diarization/transcript.json
+    transcript_md: outputs/diarization/transcript.md
+    viz_html: outputs/diarization/viz.html
+scripts:
+  mom_generator: dn_studio/generalised_mom_generator.py
+  brd_generator: dn_studio/generalised_brd_generator.py
+gcs:
+  mom:
+    docx: true
+    md: true
+    pdf: true
+    output_path: outputs/gcs/mom
+  brd:
+    docx: true
+    md: true
+    pdf: true
+    output_path: outputs/gcs/brd
+last_run_action: null
+last_run_timestamp: null
+last_run_status: null
+experiment:
+  name: r002
+  context: Learning Management System >> sailee roy >> 12-03-2026 -- 12:33

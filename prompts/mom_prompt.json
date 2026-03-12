@@ -1,0 +1,8 @@
+{
+  "Task": {
+    "description": "Generate a complete, structured Minutes of Meeting (MoM) document by analyzing a diarized meeting transcript. Only populate the 'value' fields in the template. The schema structure, descriptions, and formats must remain unchanged.",
+    "input": "Diarized meeting transcript (text with speaker labels and utterance_ids) + MoM_Template",
+    "output": "MoM JSON with all value fields populated"
+  }
+}
+
