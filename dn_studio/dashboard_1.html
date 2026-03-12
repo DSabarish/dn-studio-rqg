@@ -725,6 +725,12 @@ function loadRun(idx) {
     audioEl.oncanplay=()=>{ audioReady=true; document.getElementById('playhead-line').style.display='block'; };
     document.getElementById('audio-filename').textContent=run.audio_name||run.label;
     document.getElementById('playhead-line').style.display='none';
+  } else if(run.audio_url) {
+    audioEl.src=run.audio_url;
+    audioEl.load(); audioReady=false;
+    audioEl.oncanplay=()=>{ audioReady=true; document.getElementById('playhead-line').style.display='block'; };
+    document.getElementById('audio-filename').textContent=run.audio_name||run.label;
+    document.getElementById('playhead-line').style.display='none';
   } else {
     audioEl.src=''; audioReady=false;
     document.getElementById('audio-filename').textContent='Audio not embedded — too large or not found';

@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_file
 from flask_cors import CORS
 
 from datetime import datetime
@@ -115,6 +115,7 @@ def _build_run_payload(
         "clusters_b64": "",
         "speaker_map": {},
         "audio_b64": "",
+        "audio_url": "",
         "audio_mime": "audio/mpeg",
         "audio_name": "",
         "mom_md_b64": "",
@@ -157,26 +158,32 @@ def _build_run_payload(
             pass
 
     manifest_path = dir_path / "run_manifest.json"
+    manifest_audio_path: Optional[str] = None
     if manifest_path.exists():
         try:
             mf = json.loads(manifest_path.read_text(encoding="utf-8"))
             payload["speaker_map"] = mf.get("speaker_map", {}) or {}
+            manifest_audio_path = mf.get("audio_path")
         except Exception:
             pass
 
-    raw_audio = audio_path_override or getattr(config, "AUDIO_FILE", None)
+    raw_audio = audio_path_override or manifest_audio_path or getattr(config, "AUDIO_FILE", None)
     audio_path = _safe_audio_path(raw_audio)
     try:
         if audio_path and audio_path != "None":
             audio_file = Path(audio_path)
-            if audio_file.exists() and audio_file.is_file() and audio_file.stat().st_size < 20 * 1024 * 1024:
-                payload["audio_b64"] = base64.b64encode(audio_file.read_bytes()).decode("utf-8")
+            if audio_file.exists() and audio_file.is_file():
                 payload["audio_name"] = audio_file.name
                 ext = audio_file.suffix.lower()
-                payload["audio_mime"] = {
+                mime = {
                     ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg",
                     ".wav": "audio/wav", ".ogg": "audio/ogg", ".webm": "audio/webm",
                 }.get(ext, "audio/mpeg")
+                payload["audio_mime"] = mime
+                if audio_file.stat().st_size < 20 * 1024 * 1024:
+                    payload["audio_b64"] = base64.b64encode(audio_file.read_bytes()).decode("utf-8")
+                else:
+                    payload["audio_url"] = f"/api/serve_audio?path={audio_path}"
     except Exception:
         pass
 
@@ -848,6 +855,21 @@ def api_set_audio_path() -> Any:
     manifest["audio_path"] = audio_path
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     return jsonify({"ok": True, "audio_path": audio_path})
+
+
+@app.route("/api/serve_audio", methods=["GET"])
+def api_serve_audio() -> Any:
+    audio_path = request.args.get("path", "").strip()
+    if not audio_path:
+        return jsonify({"ok": False, "error": "No path parameter"}), 400
+    p = Path(audio_path)
+    if not p.exists() or not p.is_file():
+        return jsonify({"ok": False, "error": f"File not found: {audio_path}"}), 404
+    mime = {
+        ".m4a": "audio/mp4", ".mp4": "audio/mp4", ".mp3": "audio/mpeg",
+        ".wav": "audio/wav", ".ogg": "audio/ogg", ".webm": "audio/webm",
+    }.get(p.suffix.lower(), "audio/mpeg")
+    return send_file(str(p), mimetype=mime)
 
 
 @app.route("/api/generate_mom", methods=["POST"])
