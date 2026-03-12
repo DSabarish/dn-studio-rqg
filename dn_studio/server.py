@@ -827,6 +827,29 @@ def api_upload_audio() -> Any:
     return jsonify({"ok": True, "audio_path": str(dest), "filename": f.filename})
 
 
+@app.route("/api/set_audio_path", methods=["POST"])
+def api_set_audio_path() -> Any:
+    data = request.get_json(silent=True) or {}
+    audio_path = data.get("audio_path", "").strip()
+    if not audio_path:
+        return jsonify({"ok": False, "error": "No audio_path provided"}), 400
+    p = Path(audio_path)
+    if not p.exists() or not p.is_file():
+        return jsonify({"ok": False, "error": f"File not found: {audio_path}"}), 404
+    audio_dir = Path(OUTPUT_DIR)
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    manifest_path = audio_dir / "run_manifest.json"
+    manifest: Dict[str, Any] = {}
+    if manifest_path.exists():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            manifest = {}
+    manifest["audio_path"] = audio_path
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    return jsonify({"ok": True, "audio_path": audio_path})
+
+
 @app.route("/api/generate_mom", methods=["POST"])
 def api_generate_mom() -> Any:
     return jsonify({"ok": False, "error": "MoM LLM generation not configured."}), 501

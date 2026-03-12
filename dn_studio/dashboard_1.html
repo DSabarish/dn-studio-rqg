@@ -270,10 +270,11 @@
       </div>
       <div>
         <label style="display:block;margin-bottom:4px;color:#94a3b8">Audio file</label>
-        <input id="cfg-audio-file" type="file" accept="audio/*,video/*"
-          style="font-size:.68rem;color:#94a3b8" />
-        <div id="cfg-audio-label" style="font-size:.62rem;color:#475569;margin-top:4px">
-          Current: uses default audio from cfg/config.yaml
+        <div style="display:flex;align-items:center;gap:10px;background:#060612;border:1px solid #1e293b;border-radius:8px;padding:8px 12px;margin-top:4px">
+          <span style="font-size:.6rem;color:#22c55e;white-space:nowrap">✓ Default</span>
+          <div id="cfg-audio-label" style="font-size:.65rem;color:#94a3b8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            /content/dn-studio-rqg/inputs/LMS.mp3
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -571,8 +572,6 @@ async function loadConfigForSelectedRun() {
     document.getElementById('cfg-project-name').value = d.project_name || '';
     document.getElementById('cfg-context').value = d.context || '';
     document.getElementById('cfg-num-speakers').value = d.num_speakers != null ? d.num_speakers : '';
-    const lbl = document.getElementById('cfg-audio-label');
-    lbl.textContent = d.audio_path ? 'Current audio: ' + d.audio_path : 'Current: uses default audio from cfg/config.yaml';
     yamlEl.textContent = (d.yaml_raw && d.yaml_raw.trim()) ? d.yaml_raw : '(No YAML for this run)';
     toast('Config loaded for ' + run.label, 'ok');
   } catch (e) {
@@ -1290,34 +1289,22 @@ async function initConfigTab() {
     document.getElementById('cfg-project-name').value = d.project_name || '';
     document.getElementById('cfg-context').value = d.context || '';
     document.getElementById('cfg-num-speakers').value = d.num_speakers != null ? d.num_speakers : '';
-    const lbl = document.getElementById('cfg-audio-label');
-    lbl.textContent = d.audio_path ? `Current audio: ${d.audio_path}` : 'Current: uses default audio from cfg/config.yaml';
     const yamlEl = document.getElementById('cfg-yaml-preview');
     if (yamlEl) yamlEl.textContent = (d.yaml_raw && d.yaml_raw.trim()) ? d.yaml_raw : 'Click “Load config” to show YAML for the selected project/run.';
   } catch (e) {
     console.warn('config load failed', e);
   }
 
-  const fileInput = document.getElementById('cfg-audio-file');
-  const lbl = document.getElementById('cfg-audio-label');
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    lbl.textContent = 'Uploading audio…';
-    const fd = new FormData();
-    fd.append('file', file);
-    try {
-      const resp = await fetch('/api/upload_audio', { method: 'POST', body: fd });
-      const d = await resp.json();
-      if (d.ok) {
-        lbl.textContent = `Uploaded: ${d.filename}`;
-      } else {
-        lbl.textContent = `Error: ${d.error}`;
-      }
-    } catch (err) {
-      lbl.textContent = 'Upload failed — check server logs';
-    }
-  });
+  // Auto-set audio path to the default LMS file
+  try {
+    await fetch('/api/set_audio_path', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ audio_path: '/content/dn-studio-rqg/inputs/LMS.mp3' }),
+    });
+  } catch (e) {
+    console.warn('Failed to set default audio path', e);
+  }
 
   document.getElementById('cfg-save-btn').onclick = async () => {
     const status = document.getElementById('cfg-status');

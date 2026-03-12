@@ -259,6 +259,22 @@ def api_upload_audio():
     _save_cfg(cfg_path, cfg)
     return jsonify({"ok": True, "filename": safe_name, "path": str(dest)})
 
+@app.route("/api/set_audio_path", methods=["POST"])
+def api_set_audio_path():
+    data = request.get_json(silent=True) or {}
+    audio_path = data.get("audio_path", "").strip()
+    if not audio_path:
+        return jsonify({"ok": False, "error": "No audio_path provided"}), 400
+    p = Path(audio_path)
+    if not p.exists() or not p.is_file():
+        return jsonify({"ok": False, "error": f"File not found: {audio_path}"}), 404
+    proj_dir, run_dir = _active_project_and_run()
+    cfg_path = (run_dir / "config.yaml") if run_dir else (proj_dir / "config.yaml")
+    cfg = _load_cfg(cfg_path)
+    cfg["audio_path"] = audio_path
+    _save_cfg(cfg_path, cfg)
+    return jsonify({"ok": True, "audio_path": audio_path})
+
 @app.route("/audio/<path:filename>")
 def serve_audio(filename):
     return send_from_directory(AUDIO_DIR, filename)
